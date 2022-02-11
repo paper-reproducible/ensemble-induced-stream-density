@@ -1,0 +1,71 @@
+import numpy
+from Common import asscalar, unique, get_array_module
+from sklearn.base import BaseEstimator
+
+
+def get_samples(X, psi):
+    xp, _ = get_array_module(X)
+    X = unique(X)
+    n = X.shape[0]
+
+    new_indices = xp.random.choice(n, size=(psi), replace=False)
+    return X[new_indices, :]
+
+
+def update_samples(X, samples, start=0):
+    xp, _ = get_array_module(X)
+
+    n = X.shape[0]
+    psi = samples.shape[0]
+
+    new_samples = None
+    drop_samples = None
+
+    replace_by = xp.ones(psi, dtype=xp.int) * -1
+    reservoir = samples.copy()
+
+    r = xp.random.rand(n)
+    r = xp.floor((xp.arange(n) + start) * r)
+
+    for j in range(psi):
+        potential_i = xp.where(r == j)[0]
+        if potential_i.shape[0] == 0:
+            continue
+        i = xp.max(potential_i)
+        item = X[i : i + 1, :]
+        if xp.any(xp.all(reservoir == item, axis=1)):
+            continue  # no duplicates
+        replace_by[j] = i
+        reservoir[j, :] = item[0, :]
+
+    drop_indices = replace_by >= 0
+    changed_count = xp.sum(drop_indices)
+    if changed_count > 0:
+        drop_samples = samples[drop_indices, :]
+        new_samples = X[replace_by[drop_indices], :]
+
+    return int(asscalar(changed_count)), new_samples, drop_samples, reservoir
+
+
+class ReservoirSamplingEstimator(BaseEstimator):
+    def __init__(self, psi):
+        self.psi = psi
+        self.fitted = 0
+
+    def fit(self, X, y=None):
+        self.samples_ = get_samples(X, self.psi)
+        self.fitted = X.shape[0]
+        self.changed_ = True
+        return self
+
+    def partial_fit(self, X, y=None):
+        if self.fitted == 0:
+            return self.fit(X, y), self.psi, self.samples_, None
+        changed, _, _, reservoir = self.update_samples(X)
+        self.samples_ = reservoir
+        self.changed_ = changed > 0
+        self.fitted = self.fitted + X.shape[0]
+        return self
+
+    def update_samples(self, X):
+        return update_samples(X, self.samples_, start=self.fitted)
