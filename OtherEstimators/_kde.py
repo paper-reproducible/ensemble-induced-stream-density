@@ -1,6 +1,5 @@
 from joblib import Parallel, delayed
 from sklearn.base import DensityMixin, BaseEstimator
-from sklearn.utils.fixes import _joblib_parallel_args
 from Common import ReservoirSamplingEstimator, get_array_module
 
 
@@ -69,7 +68,7 @@ class AdaptiveKernelDensityEstimator(BaseEstimator, DensityMixin):
             return Parallel(
                 n_jobs=self.n_jobs,
                 verbose=self.verbose,
-                **_joblib_parallel_args(prefer="threads")
+                prefer="threads"
             )
         else:
             return self.preset_parallel

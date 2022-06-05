@@ -15,7 +15,6 @@ from IsolationEstimators import (
 from ArtificialStream._txt import TXTStream
 from ArtificialStream._gaussians import gaussian2x2
 
-from sklearn.utils.fixes import _joblib_parallel_args
 from joblib import Parallel, delayed
 
 

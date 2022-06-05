@@ -1,5 +1,4 @@
 from sklearn.base import BaseEstimator, clone
-from sklearn.utils.fixes import _joblib_parallel_args
 from joblib import Parallel, delayed
 
 
@@ -18,7 +17,7 @@ class BaseBaggingEstimator(BaseEstimator):
             return Parallel(
                 n_jobs=self.n_jobs,
                 verbose=self.verbose,
-                **_joblib_parallel_args(prefer="threads")
+                prefer="threads"
             )
         else:
             return self.preset_parallel

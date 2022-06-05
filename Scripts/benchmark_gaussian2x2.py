@@ -14,7 +14,6 @@ from IsolationEstimators import (
 from ArtificialStream._stream import ProbabilityStream
 from ArtificialStream._gaussians import gaussian2x2_ball
 
-from sklearn.utils.fixes import _joblib_parallel_args
 from joblib import Parallel, delayed
 
 
@@ -100,7 +99,7 @@ def construct_estimators(parallel=None):
     return dp
 
 
-def benchmark_stream(stream, drifts, n, estimators, evaluate_window=500):
+def benchmark_stream(stream: ProbabilityStream, drifts, n, estimators, evaluate_window=500):
     # stream = ProbabilityStream()
     stream.reset()
 
@@ -152,7 +151,7 @@ def benchmark_stream(stream, drifts, n, estimators, evaluate_window=500):
     return X, f1_rt, estimators
 
 
-def benchmark_total(X, estimators):
+def benchmark_total(X, estimators, stream: ProbabilityStream):
 
     f1_static = [0 for _ in range(len(estimators))]
 
@@ -191,9 +190,9 @@ def benchmark_gaussian2x2():
         )
 
         more_estimators = construct_estimators(parallel)
-        f1_static = benchmark_total(X, more_estimators)
+        f1_static = benchmark_total(X, more_estimators, stream)
 
-        f1_dynamic = benchmark_total(X, trained_estimators)
+        f1_dynamic = benchmark_total(X, trained_estimators, stream)
 
     with pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
         "benchmark_gaussian2x2_ball.xlsx"
