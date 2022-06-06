@@ -1,17 +1,28 @@
+# pyright: reportMissingImports=false
 import numpy
 from scipy import sparse as sci_sparse
 
 
 def get_array_module(X):
     try:
-        from cupy import get_array_module as cu_get_array_module
-        from cupy import sparse as cu_sparse
+        import cupy
 
-        xp = cu_get_array_module(X)
-        if xp == numpy:
-            return xp, sci_sparse
-        else:
-            return xp, cu_sparse
+        xp = cupy.cu_get_array_module(X)
+        if xp == cupy:
+            return xp, cupy.cu_sparse
+    except:
+        pass
+
+    try:
+        import tensorflow as tf
+        if isinstance(X, tf.Tensor) and "numpy" in dir(X):
+            import tensorflow.experimental.numpy as tnp
+            from ._tf_sparse import coo_matrix, hstack
+            # TODO
+            tf_sparse = { coo_matrix, hstack }
+            tf_sparse.coo_matrix = coo_matrix
+            tf_sparse.hstack = hstack
+            return tnp, tf_sparse
     except:
         pass
 
