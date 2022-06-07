@@ -41,9 +41,9 @@ def _single_score(e, transformer, X, return_demass):
             # Never gonna happen
             region_volumes = transformer.region_volumes_
         region_demass = region_mass / region_volumes
-        return xp.squeeze(region_demass[indices], axis=0)
+        return region_demass[xp.squeeze(indices, axis=0)]
     else:
-        return xp.squeeze(region_mass[indices], axis=0)
+        return region_mass[xp.squeeze(indices, axis=0)]
 
 
 class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
