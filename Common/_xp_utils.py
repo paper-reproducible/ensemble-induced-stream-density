@@ -72,6 +72,8 @@ def get_array_module_with_utils(arrayModuleName):
         setattr(xpUtils, "unique", lambda X: _unique_tf(X, tf))
         setattr(xpUtils, "copy", lambda X: tf.identity(X))
         setattr(xpUtils, "tile", tf.tile)
+        setattr(xpUtils, "cast", tf.cast)
+        setattr(xpUtils, "numpy_dtype", lambda X: X.dtype.as_numpy_dtype)
         xp = tf.experimental.numpy
     elif arrayModuleName == _CUPY:
         import cupy
@@ -83,6 +85,8 @@ def get_array_module_with_utils(arrayModuleName):
         setattr(xpUtils, "unique", lambda X: _unique(X, cupy))
         setattr(xpUtils, "copy", lambda X: X.copy())
         setattr(xpUtils, "tile", cupy.tile)
+        setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
+        setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
         xp = cupy
     else:
         import scipy
@@ -94,6 +98,8 @@ def get_array_module_with_utils(arrayModuleName):
         setattr(xpUtils, "unique", lambda X: _unique(X, numpy))
         setattr(xpUtils, "copy", lambda X: X.copy())
         setattr(xpUtils, "tile", numpy.tile)
+        setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
+        setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
     setattr(xpUtils, "asscalar", lambda X: numpy.asscalar(xpUtils.to_numpy(X)))
     return xp, xpUtils
 
