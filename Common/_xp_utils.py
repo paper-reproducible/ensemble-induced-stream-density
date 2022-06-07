@@ -35,16 +35,22 @@ def _get_array_module_name(X):
 
 
 def _unique(X, xp):
-    X_ = xp.ascontiguousarray(X).view(
-        xp.dtype((xp.void, X.dtype.itemsize * X.shape[1]))
-    )
-    _, idx = xp.unique(X_, return_index=True)
-
-    return X[idx]
+    if len(X.shape) == 2:
+        X_ = xp.ascontiguousarray(X).view(
+            xp.dtype((xp.void, X.dtype.itemsize * X.shape[1]))
+        )
+        _, idx = xp.unique(X_, return_index=True)
+        X_ = X[idx]
+    elif len(X.shape) == 1:
+        X_ = xp.unique(X)
+    return X_
 
 
 def _unique_tf(X, tf):
-    X_, _ = tf.raw_ops.UniqueV2(x=X, axis=[0])
+    if len(X.shape) == 2:
+        X_, _ = tf.raw_ops.UniqueV2(x=X, axis=[0])
+    elif len(X.shape) == 1:
+        X_, _ = tf.unique(X)
     return X_
 
 
@@ -85,10 +91,10 @@ def get_array_module_with_utils(arrayModuleName):
         setattr(xpUtils, "hstack", scipy.sparse.hstack)
         setattr(xpUtils, "norm", numpy.linalg.norm)
         setattr(xpUtils, "to_numpy", lambda X: X)
-        setattr(xpUtils, "unique", lambda X: _unique(X, cupy))
+        setattr(xpUtils, "unique", lambda X: _unique(X, numpy))
         setattr(xpUtils, "copy", lambda X: X.copy())
         setattr(xpUtils, "tile", numpy.tile)
-    setattr(xpUtils, "asscarlar", lambda X: numpy.asscalar(xpUtils.to_numpy(X)))
+    setattr(xpUtils, "asscalar", lambda X: numpy.asscalar(xpUtils.to_numpy(X)))
     return xp, xpUtils
 
 

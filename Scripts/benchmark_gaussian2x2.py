@@ -15,7 +15,7 @@ from IsolationEstimators import (
 from ArtificialStream._stream import ProbabilityStream
 from ArtificialStream._gaussians import gaussian2x2_ball
 
-from joblib import Parallel, delayed
+from joblib import Parallel
 
 
 def cluster_demass(psi, parallel=None, t=200):
@@ -184,16 +184,19 @@ def benchmark_total(X, estimators, stream: ProbabilityStream):
 
 
 def benchmark_gaussian2x2():
-    with Parallel(n_jobs=32, backend="threading") as parallel:
+    # with Parallel(n_jobs=32, backend="loky") as parallel:
+    # with Parallel(n_jobs=32, backend="multiprocessing") as parallel:
+    # with Parallel(n_jobs=32, backend="threading") as parallel:
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
 
         stream = None
 
-        if stream is None:
-            try:
-                xp, xpUtils = get_array_module_with_utils("tf.numpy")
-                stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
-            except:
-                pass
+        # if stream is None:
+        #     try:
+        #         xp, xpUtils = get_array_module_with_utils("tf.numpy")
+        #         stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
+        #     except:
+        #         pass
 
         if stream is None:
             try:

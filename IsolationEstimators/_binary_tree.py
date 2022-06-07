@@ -18,13 +18,14 @@ from Common import get_array_module
 
 def for_list(boundary, always_copy=True):
     xp, xpUtils = get_array_module(boundary)
+    result = boundary
     if boundary.ndim == 2:
         if always_copy:
-            return xpUtils.copy(boundary)
-        else:
-            return boundary
+            result = xpUtils.copy(boundary)
     else:
-        return xp.expand_dims(boundary, axis=0)
+        result = xp.expand_dims(boundary, axis=0)
+
+    return result
 
 
 def volumes(l_lower_boundaries, l_upper_boundaries):
@@ -277,9 +278,13 @@ class AxisParallelBinaryTree:
             l_upper_boundaries = self.node_upper_boundaries
         else:
             # l_lower_boundaries = self.node_lower_boundaries[l_nodes, :]
-            l_lower_boundaries = xp.take(self.node_lower_boundaries, xp.where(l_nodes), axis=0)
+            l_lower_boundaries = xp.take(
+                self.node_lower_boundaries, xp.where(l_nodes)[0], axis=0
+            )
             # l_upper_boundaries = self.node_upper_boundaries[l_nodes, :]
-            l_upper_boundaries = xp.take(self.node_upper_boundaries, xp.where(l_nodes), axis=0)
+            l_upper_boundaries = xp.take(
+                self.node_upper_boundaries, xp.where(l_nodes)[0], axis=0
+            )
         return self._search(X, l_lower_boundaries, l_upper_boundaries)
 
     def _search(self, X, l_lower_boundaries, l_upper_boundaries):
@@ -300,7 +305,7 @@ class AxisParallelBinaryTree:
             l_upper_boundaries,
         )
 
-        return xp.logical_and(
+        result = xp.logical_and(
             xp.all(
                 xp.expand_dims(X, axis=1) >= xp.expand_dims(l_lower_boundaries, axis=0),
                 axis=2,
@@ -310,6 +315,8 @@ class AxisParallelBinaryTree:
                 axis=2,
             ),
         )  # n_x * n_nodes
+
+        return result
 
     def volumes(self, l_nodes=None):
         if l_nodes is None:
