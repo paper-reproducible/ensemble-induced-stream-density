@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 from Common import get_array_module
 
 
@@ -17,13 +17,13 @@ from Common import get_array_module
 
 
 def for_list(boundary, always_copy=True):
+    xp, xpUtils = get_array_module(boundary)
     if boundary.ndim == 2:
         if always_copy:
-            return boundary.copy()
+            return xpUtils.copy(boundary)
         else:
             return boundary
     else:
-        xp, _ = get_array_module(boundary)
         return xp.expand_dims(boundary, axis=0)
 
 
@@ -35,17 +35,30 @@ def volumes(l_lower_boundaries, l_upper_boundaries):
 
 
 def single_split(lower_boundary, upper_boundary, split_dim, split_value):
+    xp, _ = get_array_module(lower_boundary)
     lower_boundary_left = for_list(lower_boundary)
 
     upper_boundary_left = for_list(upper_boundary)
-    upper_boundary_left[0, split_dim] = split_value
+    # upper_boundary_left[0, split_dim] = split_value
+    upper_boundary_left = xp.where(
+        xp.expand_dims(xp.arange(upper_boundary_left.shape[1]), axis=0) == split_dim,
+        split_value,
+        upper_boundary_left,
+    )
 
     lower_boundary_right = for_list(lower_boundary)
-    lower_boundary_right[0, split_dim] = split_value
+    # lower_boundary_right[0, split_dim] = split_value
+    lower_boundary_right = xp.where(
+        xp.expand_dims(xp.arange(lower_boundary_right.shape[1]), axis=0) == split_dim,
+        split_value,
+        lower_boundary_right,
+    )
 
     upper_boundary_right = for_list(upper_boundary)
 
-    if numpy.any(lower_boundary_left == upper_boundary_left) or numpy.any(lower_boundary_right == upper_boundary_right):
+    if np.any(lower_boundary_left == upper_boundary_left) or np.any(
+        lower_boundary_right == upper_boundary_right
+    ):
         print("wth")
     return (
         lower_boundary_left,
@@ -69,10 +82,10 @@ ROOT_LEVEL = 0
 class AxisParallelBinaryTree:
     def seed(self, lower_boundary, upper_boundary):
         xp, _ = get_array_module(lower_boundary)
-        self.node_parents = xp.array([NO_PARENT], dtype=xp.int)
-        self.node_split_dim = xp.array([NO_SPLIT], dtype=xp.int)
-        self.node_split_value = xp.array([NO_SPLIT], dtype=xp.float)
-        self.node_levels = xp.array([ROOT_LEVEL], dtype=xp.int)
+        self.node_parents = xp.array([NO_PARENT], dtype=int)
+        self.node_split_dim = xp.array([NO_SPLIT], dtype=int)
+        self.node_split_value = xp.array([NO_SPLIT], dtype=float)
+        self.node_levels = xp.array([ROOT_LEVEL], dtype=int)
 
         self.node_lower_boundaries = for_list(lower_boundary)
         self.node_upper_boundaries = for_list(upper_boundary)
@@ -90,14 +103,22 @@ class AxisParallelBinaryTree:
         i_left = self.node_parents.shape[0]
         i_right = i_left + 1
 
-        self.node_split_dim[i_node] = split_dim
+        n_node = self.node_split_dim.shape[0]
+
+        # self.node_split_dim[i_node] = split_dim
+        self.node_split_dim = xp.where(
+            xp.arange(n_node) == i_node, split_dim, self.node_split_dim
+        )
         self.node_split_dim = xp.concatenate(
-            [self.node_split_dim, xp.array([NO_SPLIT, NO_SPLIT], dtype=xp.int)], axis=0
+            [self.node_split_dim, xp.array([NO_SPLIT, NO_SPLIT], dtype=int)], axis=0
         )
 
-        self.node_split_value[i_node] = split_value
+        # self.node_split_value[i_node] = split_value
+        self.node_split_value = xp.where(
+            xp.arange(n_node) == i_node, split_value, self.node_split_value
+        )
         self.node_split_value = xp.concatenate(
-            [self.node_split_value, xp.array([NO_SPLIT, NO_SPLIT], dtype=xp.float)],
+            [self.node_split_value, xp.array([NO_SPLIT, NO_SPLIT], dtype=float)],
             axis=0,
         )
 
@@ -122,7 +143,7 @@ class AxisParallelBinaryTree:
         )
 
         self.node_parents = xp.concatenate(
-            [self.node_parents, xp.array([i_node, i_node], dtype=xp.int)], axis=0
+            [self.node_parents, xp.array([i_node, i_node], dtype=int)], axis=0
         )
 
         new_level = self.node_levels[i_node] + 1
@@ -250,23 +271,33 @@ class AxisParallelBinaryTree:
             print("WTH")
 
     def search(self, X, l_nodes=None):
+        xp, _ = get_array_module(X)
         if l_nodes is None:
             l_lower_boundaries = self.node_lower_boundaries
             l_upper_boundaries = self.node_upper_boundaries
         else:
-            l_lower_boundaries = self.node_lower_boundaries[l_nodes, :]
-            l_upper_boundaries = self.node_upper_boundaries[l_nodes, :]
+            # l_lower_boundaries = self.node_lower_boundaries[l_nodes, :]
+            l_lower_boundaries = xp.take(self.node_lower_boundaries, xp.where(l_nodes), axis=0)
+            # l_upper_boundaries = self.node_upper_boundaries[l_nodes, :]
+            l_upper_boundaries = xp.take(self.node_upper_boundaries, xp.where(l_nodes), axis=0)
         return self._search(X, l_lower_boundaries, l_upper_boundaries)
 
     def _search(self, X, l_lower_boundaries, l_upper_boundaries):
-        xp, _ = get_array_module(X)
+        xp, xpUtils = get_array_module(X)
         l_lower_boundaries = for_list(l_lower_boundaries)
         l_upper_boundaries = for_list(l_upper_boundaries)
-        l_upper_boundaries[l_upper_boundaries >= self.global_upper_boundary] = (
-            xp.tile(self.global_upper_boundary, [l_upper_boundaries.shape[0], 1])[
-                l_upper_boundaries >= self.global_upper_boundary
-            ]
-            + xp.finfo(xp.float32).eps
+        # l_upper_boundaries[l_upper_boundaries >= self.global_upper_boundary] = (
+        #     xpUtils.tile(self.global_upper_boundary, [l_upper_boundaries.shape[0], 1])[
+        #         l_upper_boundaries >= self.global_upper_boundary
+        #     ]
+        #     + xp.finfo(xp.float32).eps
+        # )
+
+        l_upper_boundaries = xp.where(
+            l_upper_boundaries >= self.global_upper_boundary,
+            xpUtils.tile(self.global_upper_boundary, [l_upper_boundaries.shape[0], 1])
+            + xp.finfo(xp.float32).eps,
+            l_upper_boundaries,
         )
 
         return xp.logical_and(

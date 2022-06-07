@@ -29,7 +29,7 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         return self
 
     def _isolation_split(self, lower_boundary, upper_boundary):
-        xp, _ = get_array_module(lower_boundary)
+        xp, xpUtils = get_array_module(lower_boundary)
 
         l_in = self._search(self.samples_, lower_boundary, upper_boundary)
         l_in = l_in[:, 0]  # only one node therefore one column
@@ -38,13 +38,13 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         elif xp.sum(l_in) < 1:
             raise Exception("There is no sample in this region!")
 
-        m_in = self.samples_[l_in, :]
+        m_in = xp.take(self.samples_, xp.where(l_in)[0], axis=0)
 
         l_dims = xp.where(xp.not_equal(xp.min(m_in, axis=0), xp.max(m_in, axis=0)))[0]
         split_dim = xp.random.randint(l_dims.shape[0])
         split_dim = l_dims[split_dim]
 
-        sample_values = xp.unique(m_in[:, split_dim])
+        sample_values = xpUtils.unique(m_in[:, split_dim])
         sample_values = xp.sort(sample_values)
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
         split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
@@ -92,7 +92,7 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
         self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=xp.float
+            self.search(X), axis=0, dtype=float
         )
 
         self.samples_ = reservoir
@@ -156,7 +156,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             X, SO = rotate(X)
             self.SO_ = SO
         super().fit(X, y)
-        self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=xp.float)
+        self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=float)
         self.fitted = X.shape[0]
         # self.node_volumes_ = self.volumes() # included in fit
 
@@ -180,7 +180,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
         self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=xp.float
+            self.search(X), axis=0, dtype=float
         )
 
         self.samples_ = reservoir

@@ -1,19 +1,19 @@
-import numpy
-from Common import asscalar, unique, get_array_module
+import numpy as np
+from Common import get_array_module
 from sklearn.base import BaseEstimator
 
 
 def get_samples(X, psi):
-    xp, _ = get_array_module(X)
-    X = unique(X)
+    xp, xpUtils = get_array_module(X)
+    X = xpUtils.unique(X)
     n = X.shape[0]
 
-    new_indices = xp.random.choice(n, size=(psi), replace=False)
-    return X[new_indices, :]
+    new_indices = np.random.choice(n, size=(psi), replace=False).tolist()
+    return xp.take(X, new_indices, axis=0)
 
 
 def update_samples(X, samples, start=0):
-    xp, _ = get_array_module(X)
+    xp, xpUtils = get_array_module(X)
 
     n = X.shape[0]
     psi = samples.shape[0]
@@ -21,7 +21,7 @@ def update_samples(X, samples, start=0):
     new_samples = None
     drop_samples = None
 
-    replace_by = xp.ones(psi, dtype=xp.int) * -1
+    replace_by = xp.ones(psi, dtype=int) * -1
     reservoir = samples.copy()
 
     r = xp.random.rand(n)
@@ -44,7 +44,7 @@ def update_samples(X, samples, start=0):
         drop_samples = samples[drop_indices, :]
         new_samples = X[replace_by[drop_indices], :]
 
-    return int(asscalar(changed_count)), new_samples, drop_samples, reservoir
+    return int(xpUtils.asscalar(changed_count)), new_samples, drop_samples, reservoir
 
 
 class ReservoirSamplingEstimator(BaseEstimator):

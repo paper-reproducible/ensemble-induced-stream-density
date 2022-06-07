@@ -9,12 +9,13 @@ from ._constants import ANNE, IFOREST
 
 def _single_fit(e, transformer, X):
     dims = X.shape[1]
-    xp, _ = get_array_module(X)
-    samples = ball_samples(e.psi, dims, xp=xp)
+    xp, xpUtils = get_array_module(X)
+    samples = ball_samples(e.psi, dims, xp=xp, linalg=xpUtils)
     transformer.fit(samples)
     indices = transformer.transform(X)
     transformer.region_mass_ = xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)), axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
+        axis=1,
     )
     return
 
@@ -23,7 +24,8 @@ def _single_partial_fit(e, transformer, X):
     xp, _ = get_array_module(X)
     indices = transformer.transform(X)
     transformer.region_mass_ = transformer.region_mass_ + xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)), axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
+        axis=1,
     )
     return
 

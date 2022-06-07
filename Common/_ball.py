@@ -1,4 +1,4 @@
-from ._utils import get_array_module
+from ._xp_utils import get_array_module
 import numpy as np
 
 
@@ -47,23 +47,23 @@ def rotate(X, SO=None):
 
 
 def ball_scale(X):
-    xp, _ = get_array_module(X)
+    xp, xpUtils = get_array_module(X)
 
     # move to zero
     center = (xp.min(X, axis=0, keepdims=True) + xp.max(X, axis=0, keepdims=True)) / 2
     X = X - center
 
     # scale
-    d = xp.max(xp.linalg.norm(X, ord=2, axis=1))
+    d = xp.max(xpUtils.norm(X, ord=2, axis=1))
     X = X / d
 
     return X
 
 
 # See method 22 of http://extremelearning.com.au/how-to-generate-uniformly-random-points-on-n-spheres-and-n-balls/
-def ball_samples(psi, dims, xp=np):
-    u = xp.reshape(xp.random.normal(0, 1, (dims + 2) * psi), [psi, dims + 2])
-    norm = xp.linalg.norm(u, axis=1, keepdims=True)
+def ball_samples(psi, dims, xp=np, linalg=np.linalg):
+    u = xp.reshape(xp.random.standard_normal(size=(dims + 2) * psi), [psi, dims + 2])
+    norm = linalg.norm(u, axis=1, keepdims=True)
     u = u / norm
     return u[:, 0:dims]
 

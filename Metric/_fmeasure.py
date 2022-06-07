@@ -1,14 +1,17 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from Common import to_numpy
+from Common import get_array_module
 
 eps = np.finfo(float).eps
 
 # y_true should not include noise (-1 or 0)
 def fmeasure(y_true, y_pred):
 
-    y_true = to_numpy(y_true)
-    y_pred = to_numpy(y_pred)
+    _, xpUtils = get_array_module(y_true)
+    y_true = xpUtils.to_numpy(y_true)
+
+    _, xpUtils = get_array_module(y_pred)
+    y_pred = xpUtils.to_numpy(y_pred)
 
     y_true, y_pred = _fix_array(y_true, y_pred)
 
@@ -116,4 +119,3 @@ def _calc_precision(matrix):
         # calculate the total positive examples
         m_precision[:, j] = m_precision[:, j] / (sumcol[:, j] + eps)
     return m_precision
-

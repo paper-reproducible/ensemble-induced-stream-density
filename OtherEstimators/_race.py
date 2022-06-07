@@ -42,10 +42,10 @@ class RACE:
     def rehash(self, hashvalues):
         xp, _ = get_array_module(hashvalues)
         if self.counts is None:
-            self.counts = xp.zeros((self.R, self.W), dtype=xp.dtype(int))
+            self.counts = xp.zeros((self.R, self.W), dtype=int)
 
         rehashed = xp.floor(hashvalues)
-        rehashed = (rehashed % self.W).astype(xp.dtype(int))
+        rehashed = (rehashed % self.W).astype(int)
         return rehashed, xp
 
     def add(self, hashvalues):
@@ -60,7 +60,7 @@ class RACE:
             self.counts[idx, rehash] += -1
 
     def clear(self, xp):
-        self.counts = xp.zeros((self.R, self.W), dtype=xp.dtype(int))
+        self.counts = xp.zeros((self.R, self.W), dtype=int)
 
     def query(self, hashvalues):
         rehashed, xp = self.rehash(hashvalues)

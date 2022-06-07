@@ -25,7 +25,7 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         return xp.equal(indices, indices.T)
 
     def transform(self, X, return_similarity=False):
-        xp, sparse = get_array_module(X)
+        xp, xpUtils = get_array_module(X)
         n = X.shape[0]
 
         if return_similarity:
@@ -39,14 +39,14 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
 
             def loop_body(estimator):
                 indices = estimator.transform(X)
-                encoded = sparse.coo_matrix(
-                    (xp.ones(n, dtype=xp.float32), (xp.arange(n), indices[:, 0])),
+                encoded = xpUtils.coo_matrix(
+                    (xp.ones(n, dtype=float), (xp.arange(n), indices[:, 0])),
                     shape=(n, self.psi),
                 )
                 return encoded
 
             all_results = Parallel()(delayed(loop_body)(i) for i in self.transformers_)
-            return sparse.hstack(all_results)
+            return xpUtils.hstack(all_results)
 
 
 class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):

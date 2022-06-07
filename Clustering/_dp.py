@@ -101,7 +101,7 @@ class DensityPeak(BaseEstimator, ClusterMixin):
 
         if self.local_cache_ is None:
             m_test = X
-            x_mask = xp.ones(X.shape[0], dtype=xp.bool)
+            x_mask = xp.ones(X.shape[0], dtype=bool)
         else:
             m_test = xp.concatenate([self.local_cache_, X], axis=0)
             x_mask = xp.arange(m_test.shape[0]) >= self.local_cache_.shape[0]
@@ -154,7 +154,7 @@ class DensityPeak(BaseEstimator, ClusterMixin):
             xp, _ = get_array_module(X)
             if self.local_cache_ is None:
                 m_test = X
-                x_mask = xp.ones(X.shape[0], dtype=xp.bool)
+                x_mask = xp.ones(X.shape[0], dtype=bool)
             else:
                 m_test = xp.concatenate([self.local_cache_, X], axis=0)
                 x_mask = xp.arange(m_test.shape[0]) >= (m_test.shape[0] - X.shape[0])

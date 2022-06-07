@@ -3,6 +3,7 @@ import pandas as pd
 
 from sklearn.utils.validation import check_is_fitted
 
+from Common import get_array_module_with_utils
 from Metric import fmeasure
 from Clustering import DensityPeak
 from IsolationEstimators import (
@@ -99,7 +100,10 @@ def construct_estimators(parallel=None):
     return dp
 
 
-def benchmark_stream(stream: ProbabilityStream, drifts, n, estimators, evaluate_window=500):
+def benchmark_stream(
+    stream: ProbabilityStream, drifts, n, estimators, evaluate_window=500
+):
+    xp = stream.xp
     # stream = ProbabilityStream()
     stream.reset()
 
@@ -112,7 +116,7 @@ def benchmark_stream(stream: ProbabilityStream, drifts, n, estimators, evaluate_
 
         # fit
         if X_i is not None:
-            X = X_i if X is None else np.append(X, X_i, axis=0)
+            X = X_i if X is None else xp.append(X, X_i, axis=0)
 
             def task(estimator):
                 # estimator = cluster_estimator(100)
@@ -143,9 +147,9 @@ def benchmark_stream(stream: ProbabilityStream, drifts, n, estimators, evaluate_
                 # f1 = l_f1[j]
                 f1 = task(estimator)
                 f1_rt[j] = (
-                    np.array([f1])
+                    xp.array([f1])
                     if f1_rt[j] is None
-                    else np.append(f1_rt[j], np.array([f1]))
+                    else xp.append(f1_rt[j], xp.array([f1]))
                 )
 
     return X, f1_rt, estimators
@@ -181,7 +185,27 @@ def benchmark_total(X, estimators, stream: ProbabilityStream):
 
 def benchmark_gaussian2x2():
     with Parallel(n_jobs=32, backend="threading") as parallel:
-        stream = ProbabilityStream(ball=True)
+
+        stream = None
+
+        if stream is None:
+            try:
+                xp, xpUtils = get_array_module_with_utils("tf.numpy")
+                stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
+            except:
+                pass
+
+        if stream is None:
+            try:
+                xp, xpUtils = get_array_module_with_utils("cupy")
+                stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
+            except:
+                pass
+
+        if stream is None:
+            xp, xpUtils = get_array_module_with_utils("numpy")
+            stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
+
         name, drifts, n = gaussian2x2_ball(stream)
 
         # keep this out without writer
