@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.base import DensityMixin
 from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
@@ -31,7 +32,7 @@ def _single_partial_fit(e, transformer, X):
 
 
 def _single_score(e, transformer, X, return_demass):
-    xp, _ = get_array_module(X)
+    xp, xpUtils = get_array_module(X)
     region_mass = transformer.region_mass_
     indices = transformer.transform(X)
     if return_demass:
@@ -40,7 +41,9 @@ def _single_score(e, transformer, X, return_demass):
         else:
             # Never gonna happen
             region_volumes = transformer.region_volumes_
-        region_demass = region_mass / region_volumes
+        region_demass = (
+            xpUtils.cast(region_mass, dtype=np.dtype(float)) / region_volumes
+        )
         return region_demass[xp.squeeze(indices, axis=0)]
     else:
         return region_mass[xp.squeeze(indices, axis=0)]

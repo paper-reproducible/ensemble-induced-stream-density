@@ -1,4 +1,5 @@
 from abc import ABCMeta
+import numpy as np
 from sklearn.base import BaseEstimator, DensityMixin
 from Common import get_array_module
 
@@ -40,12 +41,12 @@ class RACE:
         self.counts = None  # np.zeros((self.R, self.W), dtype=self.dtype)
 
     def rehash(self, hashvalues):
-        xp, _ = get_array_module(hashvalues)
+        xp, xpUtils = get_array_module(hashvalues)
         if self.counts is None:
-            self.counts = xp.zeros((self.R, self.W), dtype=int)
+            self.counts = xp.zeros((self.R, self.W), dtype=np.dtype(int))
 
         rehashed = xp.floor(hashvalues)
-        rehashed = (rehashed % self.W).astype(int)
+        rehashed = xpUtils.cast(rehashed % self.W, dtype=np.dtype(int))
         return rehashed, xp
 
     def add(self, hashvalues):
@@ -60,7 +61,7 @@ class RACE:
             self.counts[idx, rehash] += -1
 
     def clear(self, xp):
-        self.counts = xp.zeros((self.R, self.W), dtype=int)
+        self.counts = xp.zeros((self.R, self.W), dtype=np.dtype(int))
 
     def query(self, hashvalues):
         rehashed, xp = self.rehash(hashvalues)
@@ -85,9 +86,9 @@ class L2LSH:
     def hash(self, x):
         xp, _ = get_array_module(x)
         if self.W is None:
-            self.W = xp.random.normal(size=(self.N, self.d))
+            self.W = xp.random.standard_normal(size=(self.N, self.d))
         if self.b is None:
-            self.b = xp.random.uniform(low=0, high=self.r, size=self.N)
+            self.b = xp.random.uniform(low=0, high=self.r, size=[self.N])
         return (xp.squeeze(xp.dot(self.W, x)) + self.b) / self.r
 
 
@@ -113,7 +114,7 @@ class FastSRPMulti:
         if self.W is None:
             self.W = xp.random.normal(size=(self.N, self.d))
         if self.powersOfTwo is None:
-            self.powersOfTwo = xp.array([2 ** i for i in range(self.p)])
+            self.powersOfTwo = xp.array([2**i for i in range(self.p)])
         # p is the number of concatenated hashes that go into each
         # of the final output hashes
         h = xp.sign(xp.dot(self.W, x))
