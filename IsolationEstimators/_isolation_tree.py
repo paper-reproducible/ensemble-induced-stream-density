@@ -17,7 +17,9 @@ def get_boundaries(X, ball_scaled=True):
     return global_lower_boundary, global_upper_boundary
 
 
-class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin):
+class IsolationTree(
+    ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin
+):
     def __init__(self, psi):
         super().__init__(psi)
 
@@ -49,7 +51,9 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
         split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
 
-        if numpy.any(lower_boundary==split_value) or numpy.any(upper_boundary==split_value):
+        if numpy.any(lower_boundary == split_value) or numpy.any(
+            upper_boundary == split_value
+        ):
             print("wth")
 
         return False, split_dim, split_value, l_in
@@ -91,9 +95,7 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=float
-        )
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
 
         self.samples_ = reservoir
         self.fitted = self.fitted + X.shape[0]
@@ -126,9 +128,11 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         if not xp.any(search_result):
             print("WTH")
         i_node_drop = l_leaf[search_result[0, :]][0]
-        self.samples_ = self.samples_[
-            xp.logical_not(xp.all(self.samples_ == drop_sample, axis=1)), :
-        ]
+        self.samples_ = xp.take(
+            self.samples_,
+            xp.where(xp.logical_not(xp.all(self.samples_ == drop_sample, axis=1)))[0],
+            axis=0,
+        )
         volume_drop = self.node_volumes_[i_node_drop]
         l_volumes_diff, l_keep = self.prune(i_node_drop)
 
@@ -179,9 +183,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=float
-        )
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
 
         self.samples_ = reservoir
         self.fitted = self.fitted + X.shape[0]
@@ -225,4 +227,3 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             return l_leaf_demass[indices]
         else:
             return l_leaf_mass[indices]
-

@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 import numpy
 
 
@@ -13,6 +14,13 @@ def _unique(X, xp=numpy):
     return X_
 
 
+def _tensor_scatter_nd_update(X, indices, updates):
+    X_ = X.copy()
+    X_[indices] = updates
+
+    return X_
+
+
 def setup_cupy(xpUtils):
     import cupy
 
@@ -25,6 +33,7 @@ def setup_cupy(xpUtils):
     setattr(xpUtils, "tile", cupy.tile)
     setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
+    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
 
     return cupy
 
@@ -41,5 +50,6 @@ def setup_numpy(xpUtils):
     setattr(xpUtils, "tile", numpy.tile)
     setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
+    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
 
     return numpy

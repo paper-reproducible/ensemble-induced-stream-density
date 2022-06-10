@@ -1,6 +1,11 @@
+# pyright: reportMissingImports=false
+
+
 def setup_tf(xpUtils):
     import tensorflow as tf
     from scipy import sparse
+
+    xp = tf.experimental.numpy
 
     def _coo_matrix(X: tf.Tensor, shape=None, dtype=None, copy=False):
         return
@@ -15,6 +20,12 @@ def setup_tf(xpUtils):
             X_, _ = tf.unique(X)
         return X_
 
+    def _tensor_scatter_nd_update(X, indices, updates):
+        if len(indices.shape) == 1:
+            indices = xp.expand_dims(indices, axis=1)
+
+        return tf.tensor_scatter_nd_update(X, indices, updates)
+
     setattr(xpUtils, "coo_matrix", _coo_matrix)
     setattr(xpUtils, "hstack", _hstack)
     setattr(xpUtils, "norm", tf.norm)
@@ -24,5 +35,5 @@ def setup_tf(xpUtils):
     setattr(xpUtils, "tile", tf.tile)
     setattr(xpUtils, "cast", tf.cast)
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype.as_numpy_dtype)
-    xp = tf.experimental.numpy
+    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
     return xp

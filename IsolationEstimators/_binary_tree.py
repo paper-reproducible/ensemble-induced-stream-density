@@ -155,7 +155,7 @@ class AxisParallelBinaryTree:
         return i_left, i_right
 
     def prune(self, i_node):
-        xp, _ = get_array_module(self.node_parents)
+        xp, xpUtils = get_array_module(self.node_parents)
 
         if self.node_split_dim[i_node] != NO_SPLIT:
             raise Exception("Prune operation must be on a leaf node!")
@@ -186,14 +186,27 @@ class AxisParallelBinaryTree:
         l_nephew = self.node_parents == i_brother
         if xp.any(l_nephew):
             # Let the parent node adopt brother's children
-            self.node_parents[self.node_parents == i_brother] = self.node_parents[
-                i_node
-            ]
+            # self.node_parents[self.node_parents == i_brother] = self.node_parents[i_node]
+            self.node_parents = xp.where(
+                self.node_parents == i_brother,
+                self.node_parents[i_node],
+                self.node_parents,
+            )
             # print(self.node_parents)
 
         # update parent split to brother split
-        self.node_split_dim[i_parent] = self.node_split_dim[i_brother]
-        self.node_split_value[i_parent] = self.node_split_value[i_brother]
+        # self.node_split_dim[i_parent] = self.node_split_dim[i_brother]
+        self.node_split_dim = xp.where(
+            xp.arange(self.node_split_dim.shape[0]) == i_parent,
+            self.node_split_dim[i_brother],
+            self.node_split_dim,
+        )
+        # self.node_split_value[i_parent] = self.node_split_value[i_brother]
+        self.node_split_value = xp.where(
+            xp.arange(self.node_split_value.shape[0]) == i_parent,
+            self.node_split_value[i_brother],
+            self.node_split_value,
+        )
 
         # remove the node and brother
         self.node_split_dim = self.node_split_dim[l_keep]
@@ -204,15 +217,28 @@ class AxisParallelBinaryTree:
         self.node_parents = self.node_parents[l_keep]
         # print(self.node_parents)
         # and then update the parents to new index
-        l_idx_update = l_idx.copy()
-        l_idx_update[l_keep] = xp.arange(node_count - 2)
-        self.node_parents[self.node_parents >= 0] = l_idx_update[self.node_parents][
-            self.node_parents >= 0
-        ]
+        # l_idx_update = l_idx.copy()
+        # l_idx_update[l_keep] = xp.arange(node_count - 2)
+        l_idx_update = xpUtils.tensor_scatter_nd_update(
+            l_idx, xp.where(l_keep)[0], xp.arange(node_count - 2)
+        )
+
+        # self.node_parents[self.node_parents >= 0] = l_idx_update[self.node_parents][
+        #     self.node_parents >= 0
+        # ]
+        self.node_parents = xp.where(
+            self.node_parents >= 0,
+            xp.take(l_idx_update, self.node_parents),
+            self.node_parents,
+        )
         # print(self.node_parents)
 
-        self.node_lower_boundaries = self.node_lower_boundaries[l_keep, :]
-        self.node_upper_boundaries = self.node_upper_boundaries[l_keep, :]
+        self.node_lower_boundaries = xp.take(
+            self.node_lower_boundaries, xp.where(l_keep)[0], axis=0
+        )
+        self.node_upper_boundaries = xp.take(
+            self.node_upper_boundaries, xp.where(l_keep)[0], axis=0
+        )
 
         l_volumes_diff = l_volumes_diff[l_keep]
 
@@ -230,15 +256,37 @@ class AxisParallelBinaryTree:
 
         lower_boundary_new = for_list(lower_boundary)
         lower_boundary_old = self.node_lower_boundaries[i_node : i_node + 1, :]
-        lower_to_replace = lower_boundary_old < lower_boundary_new
-        lower_boundary_new[lower_to_replace] = lower_boundary_old[lower_to_replace]
-        self.node_lower_boundaries[i_node : i_node + 1, :] = lower_boundary_new
+        # lower_to_replace = lower_boundary_old < lower_boundary_new
+        # lower_boundary_new[lower_to_replace] = lower_boundary_old[lower_to_replace]
+        lower_boundary_new = xp.where(
+            lower_boundary_old < lower_boundary_new,
+            lower_boundary_old,
+            lower_boundary_new,
+        )
+        # self.node_lower_boundaries[i_node : i_node + 1, :] = lower_boundary_new
+        self.node_lower_boundaries = xp.where(
+            xp.expand_dims(xp.arange(self.node_lower_boundaries.shape[0]), axis=1)
+            == i_node,
+            lower_boundary_new,
+            self.node_lower_boundaries,
+        )
 
         upper_boundary_new = for_list(upper_boundary)
         upper_boundary_old = self.node_upper_boundaries[i_node : i_node + 1, :]
-        upper_to_replace = upper_boundary_old > upper_boundary_new
-        upper_boundary_new[upper_to_replace] = upper_boundary_old[upper_to_replace]
-        self.node_upper_boundaries[i_node : i_node + 1, :] = upper_boundary_new
+        # upper_to_replace = upper_boundary_old > upper_boundary_new
+        # upper_boundary_new[upper_to_replace] = upper_boundary_old[upper_to_replace]
+        upper_boundary_new = xp.where(
+            upper_boundary_old > upper_boundary_new,
+            upper_boundary_old,
+            upper_boundary_new,
+        )
+        # self.node_upper_boundaries[i_node : i_node + 1, :] = upper_boundary_new
+        self.node_upper_boundaries = xp.where(
+            xp.expand_dims(xp.arange(self.node_upper_boundaries.shape[0]), axis=1)
+            == i_node,
+            upper_boundary_new,
+            self.node_upper_boundaries,
+        )
 
         l_children = xp.where(self.node_parents == i_node)[0]
 
@@ -260,11 +308,21 @@ class AxisParallelBinaryTree:
 
             i_left = l_children[0]
             self._single_merge(lower_boundary_left, upper_boundary_left, i_left)
-            self.node_levels[i_left] = self.node_levels[i_left] - 1
+            # self.node_levels[i_left] = self.node_levels[i_left] - 1
+            self.node_levels = xp.where(
+                xp.arange(self.node_levels.shape[0]) == i_left,
+                self.node_levels[i_left] - 1,
+                self.node_levels,
+            )
 
             i_right = l_children[1]
             self._single_merge(lower_boundary_right, upper_boundary_right, i_right)
-            self.node_levels[i_right] = self.node_levels[i_right] - 1
+            # self.node_levels[i_right] = self.node_levels[i_right] - 1
+            self.node_levels = xp.where(
+                xp.arange(self.node_levels.shape[0]) == i_right,
+                self.node_levels[i_left] - 1,
+                self.node_levels,
+            )
         # TODO: remove the rest
         elif l_children.shape[0] == 0:
             return
@@ -323,8 +381,15 @@ class AxisParallelBinaryTree:
             l_lower_boundaries = self.node_lower_boundaries
             l_upper_boundaries = self.node_upper_boundaries
         else:
-            l_lower_boundaries = self.node_lower_boundaries[l_nodes, :]
-            l_upper_boundaries = self.node_upper_boundaries[l_nodes, :]
+            xp, _ = get_array_module(self.node_lower_boundaries)
+            # l_lower_boundaries = self.node_lower_boundaries[l_nodes, :]
+            l_lower_boundaries = xp.take(
+                self.node_lower_boundaries, xp.where(l_nodes)[0], axis=0
+            )
+            # l_upper_boundaries = self.node_upper_boundaries[l_nodes, :]
+            l_upper_boundaries = xp.take(
+                self.node_upper_boundaries, xp.where(l_nodes)[0], axis=0
+            )
         return volumes(l_lower_boundaries, l_upper_boundaries)
 
     def leaf(self, return_boolean=True):

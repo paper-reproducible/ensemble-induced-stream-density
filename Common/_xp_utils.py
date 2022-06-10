@@ -1,9 +1,8 @@
 # pyright: reportMissingImports=false
+
 import importlib
 import importlib.util
 import sys
-from matplotlib.pyplot import axis
-
 import numpy
 
 
