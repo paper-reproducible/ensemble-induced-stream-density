@@ -36,4 +36,5 @@ def setup_tf(xpUtils):
     setattr(xpUtils, "cast", tf.cast)
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype.as_numpy_dtype)
     setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
+    setattr(xpUtils, "gather_nd", tf.gather_nd)
     return xp

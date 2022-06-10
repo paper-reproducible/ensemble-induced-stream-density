@@ -44,9 +44,9 @@ def _single_score(e, transformer, X, return_demass):
         region_demass = (
             xpUtils.cast(region_mass, dtype=np.dtype(float)) / region_volumes
         )
-        return region_demass[xp.squeeze(indices, axis=0)]
+        return xp.take(region_demass, xp.squeeze(indices, axis=0))
     else:
-        return region_mass[xp.squeeze(indices, axis=0)]
+        return xp.take(region_mass, xp.squeeze(indices, axis=0))
 
 
 class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):

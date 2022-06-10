@@ -21,6 +21,17 @@ def _tensor_scatter_nd_update(X, indices, updates):
     return X_
 
 
+def _setup_xp(xpUtils, xp):
+    setattr(xpUtils, "unique", lambda X: _unique(X, xp))
+    setattr(xpUtils, "copy", lambda X: X.copy())
+    setattr(xpUtils, "tile", xp.tile)
+    setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
+    setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
+    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
+    setattr(xpUtils, "gather_nd", lambda X, indices: X[indices])
+    return xp
+
+
 def setup_cupy(xpUtils):
     import cupy
 
@@ -28,14 +39,7 @@ def setup_cupy(xpUtils):
     setattr(xpUtils, "hstack", cupy.sparse.hstack)
     setattr(xpUtils, "norm", cupy.linalg.norm)
     setattr(xpUtils, "to_numpy", lambda X: X.get())
-    setattr(xpUtils, "unique", lambda X: _unique(X, cupy))
-    setattr(xpUtils, "copy", lambda X: X.copy())
-    setattr(xpUtils, "tile", cupy.tile)
-    setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
-    setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
-    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
-
-    return cupy
+    return _setup_xp(xpUtils, cupy)
 
 
 def setup_numpy(xpUtils):
@@ -45,11 +49,4 @@ def setup_numpy(xpUtils):
     setattr(xpUtils, "hstack", scipy.sparse.hstack)
     setattr(xpUtils, "norm", numpy.linalg.norm)
     setattr(xpUtils, "to_numpy", lambda X: X)
-    setattr(xpUtils, "unique", lambda X: _unique(X, numpy))
-    setattr(xpUtils, "copy", lambda X: X.copy())
-    setattr(xpUtils, "tile", numpy.tile)
-    setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
-    setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
-    setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
-
-    return numpy
+    return _setup_xp(xpUtils, numpy)

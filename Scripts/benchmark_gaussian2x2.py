@@ -86,16 +86,16 @@ def construct_estimators(parallel=None):
     psis = [5]
     dp = []
     dp += [cluster_di_demass(psi, parallel) for psi in psis]
-    dp += [cluster_di_iforest(psi, parallel) for psi in psis]
-    dp += [cluster_di_anne(psi, parallel) for psi in psis]
-    dp += [cluster_mass(psi, parallel) for psi in psis]
-    dp += [cluster_demass(psi, parallel) for psi in psis]
+    # dp += [cluster_di_iforest(psi, parallel) for psi in psis]
+    # dp += [cluster_di_anne(psi, parallel) for psi in psis]
+    # dp += [cluster_mass(psi, parallel) for psi in psis]
+    # dp += [cluster_demass(psi, parallel) for psi in psis]
 
     # bws = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]
     bws = [0.05]
     for bw in bws:
-        # dp += [cluster_race(psi, bw) for psi in psis]
-        dp += [cluster_kde(psi, bw, parallel) for psi in psis]
+        dp += [cluster_race(psi, bw) for psi in psis]
+        # dp += [cluster_kde(psi, bw, parallel) for psi in psis]
 
     return dp
 

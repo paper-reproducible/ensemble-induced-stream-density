@@ -50,11 +50,22 @@ class RACE:
         return rehashed, xp
 
     def add(self, hashvalues):
-        rehashed, xp = self.rehash(hashvalues)
-        self.counts[xp.arange(self.counts.shape[0]), rehashed] += 1
+        rehashed, _ = self.rehash(hashvalues)
+        xp, xpUtils = get_array_module(rehashed)
+        # self.counts[xp.arange(self.counts.shape[0]), rehashed] += 1
+        self.counts = xpUtils.tensor_scatter_nd_update(
+            self.counts,
+            xp.transpose([xp.arange(self.counts.shape[0]), rehashed]),
+            xpUtils.gather_nd(
+                self.counts,
+                xp.transpose([xp.arange(self.counts.shape[0]), rehashed]),
+            )
+            + 1,
+        )
         return
 
     def remove(self, hashvalues):
+        # TODO: parallize and adapt to tf/tnp
         for idx, hashvalue in enumerate(hashvalues):
             rehash = int(hashvalue)
             rehash = rehash % self.W
@@ -92,6 +103,7 @@ class L2LSH:
         return (xp.squeeze(xp.dot(self.W, x)) + self.b) / self.r
 
 
+# TODO: parallize and adapt to tf/tnp
 class FastSRPMulti:
     # multiple SRP hashes combined into a set of N hash codes
     def __init__(self, reps, d, p):
