@@ -1,3 +1,4 @@
+from cmath import asin
 import numpy as np
 from Common import get_array_module
 from sklearn.base import BaseEstimator
@@ -25,7 +26,7 @@ def update_samples(X, samples, start=0):
     reservoir = xpUtils.copy(samples)
 
     r = xp.random.rand(n)
-    r = xp.floor((xp.arange(n) + start) * r)
+    r = xp.floor((xp.arange(n, dtype=r.dtype) + start) * r)
 
     for j in range(psi):
         potential_i = xp.where(r == j)[0]
@@ -35,14 +36,18 @@ def update_samples(X, samples, start=0):
         item = X[i : i + 1, :]
         if xp.any(xp.all(reservoir == item, axis=1)):
             continue  # no duplicates
-        replace_by[j] = i
-        reservoir[j, :] = item[0, :]
+        replace_by = xp.where(xp.arange(replace_by.shape[0]) == j, i, replace_by)
+        reservoir = xp.where(
+            xp.expand_dims(xp.arange(reservoir.shape[0]), axis=1) == j,
+            item[0, :],
+            reservoir,
+        )
 
     drop_indices = replace_by >= 0
     changed_count = xp.sum(drop_indices)
     if changed_count > 0:
-        drop_samples = samples[drop_indices, :]
-        new_samples = X[replace_by[drop_indices], :]
+        drop_samples = xp.take(samples, xp.where(drop_indices)[0], axis=0)
+        new_samples = xp.take(X, replace_by[drop_indices], axis=0)
 
     return int(xpUtils.asscalar(changed_count)), new_samples, drop_samples, reservoir
 
