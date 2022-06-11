@@ -23,7 +23,7 @@ def update_samples(X, samples, start=0):
     drop_samples = None
 
     replace_by = xp.ones(psi, dtype=int) * -1
-    reservoir = xpUtils.copy(samples)
+    reservoir = xp.copy(samples)
 
     r = xp.random.rand(n)
     r = xp.floor((xp.arange(n, dtype=r.dtype) + start) * r)

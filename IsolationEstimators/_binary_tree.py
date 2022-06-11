@@ -17,11 +17,11 @@ from Common import get_array_module
 
 
 def for_list(boundary, always_copy=True):
-    xp, xpUtils = get_array_module(boundary)
+    xp, _ = get_array_module(boundary)
     result = boundary
     if boundary.ndim == 2:
         if always_copy:
-            result = xpUtils.copy(boundary)
+            result = xp.copy(boundary)
     else:
         result = xp.expand_dims(boundary, axis=0)
 

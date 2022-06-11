@@ -224,6 +224,6 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
         if return_demass:
             l_leaf_volumes = self.node_volumes_[self.node_is_leaf_]
             l_leaf_demass = l_leaf_mass / l_leaf_volumes
-            return l_leaf_demass[indices]
+            return xp.take(l_leaf_demass, indices)
         else:
-            return l_leaf_mass[indices]
+            return xp.take(l_leaf_mass, indices)

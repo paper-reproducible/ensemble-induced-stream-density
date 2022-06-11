@@ -47,11 +47,10 @@ class RACE:
 
         rehashed = xp.floor(hashvalues)
         rehashed = xpUtils.cast(rehashed % self.W, dtype=np.dtype(int))
-        return rehashed, xp
+        return rehashed, xp, xpUtils
 
     def add(self, hashvalues):
-        rehashed, _ = self.rehash(hashvalues)
-        xp, xpUtils = get_array_module(rehashed)
+        rehashed, xp, xpUtils = self.rehash(hashvalues)
         # self.counts[xp.arange(self.counts.shape[0]), rehashed] += 1
         self.counts = xpUtils.tensor_scatter_nd_update(
             self.counts,
@@ -75,8 +74,16 @@ class RACE:
         self.counts = xp.zeros((self.R, self.W), dtype=np.dtype(int))
 
     def query(self, hashvalues):
-        rehashed, xp = self.rehash(hashvalues)
-        return xp.average(self.counts[xp.arange(self.counts.shape[0]), rehashed])
+        rehashed, xp, xpUtils = self.rehash(hashvalues)
+        return xp.average(
+            xpUtils.cast(
+                xpUtils.gather_nd(
+                    self.counts,
+                    xp.transpose([xp.arange(self.counts.shape[0]), rehashed]),
+                ),
+                dtype=np.dtype(float),
+            )
+        )
 
 
 class L2LSH:
