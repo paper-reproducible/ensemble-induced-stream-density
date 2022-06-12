@@ -8,35 +8,35 @@ from Common import get_array_module, ball_samples
 from ._constants import ANNE, IFOREST
 
 
-def _single_fit(transformer, X):
+def _single_fit(e, transformer, X):
     dims = X.shape[1]
     xp, xpUtils = get_array_module(X)
-    samples = ball_samples(transformer.psi, dims, xp=xp, linalg=xpUtils)
+    samples = ball_samples(e.psi, dims, xp=xp, linalg=xpUtils)
     transformer.fit(samples)
     indices = transformer.transform(X)
     transformer.region_mass_ = xp.sum(
         xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
         axis=1,
     )
-    return transformer
+    return
 
 
-def _single_partial_fit(transformer, X):
+def _single_partial_fit(e, transformer, X):
     xp, _ = get_array_module(X)
     indices = transformer.transform(X)
     transformer.region_mass_ = transformer.region_mass_ + xp.sum(
         xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
         axis=1,
     )
-    return transformer
+    return
 
 
-def _single_score(partitioning_type, transformer, X, return_demass):
+def _single_score(e, transformer, X, return_demass):
     xp, xpUtils = get_array_module(X)
     region_mass = transformer.region_mass_
     indices = transformer.transform(X)
     if return_demass:
-        if partitioning_type == IFOREST:
+        if e.partitioning_type == IFOREST:
             region_volumes = transformer.node_volumes_[transformer.node_is_leaf_]
         else:
             # Never gonna happen
@@ -67,9 +67,7 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         if not ball_scaled:
             raise NotImplementedError()
 
-        self.transformers_ = self.parallel()(
-            delayed(_single_fit)(i, X) for i in self.transformers_
-        )
+        self.parallel()(delayed(_single_fit)(self, i, X) for i in self.transformers_)
 
         self.fitted = X.shape[0]
         return self
@@ -78,8 +76,8 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         if self.fitted == 0:
             return self.fit(X, y)
 
-        self.transformers_ = self.parallel()(
-            delayed(_single_partial_fit)(i, X) for i in self.transformers_
+        self.parallel()(
+            delayed(_single_partial_fit)(self, i, X) for i in self.transformers_
         )
 
         self.fitted = self.fitted + X.shape[0]
@@ -92,7 +90,7 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
             return NotImplementedError()
 
         all_results = self.parallel()(
-            delayed(_single_score)(self.partitioning_type, i, X, return_demass)
+            delayed(_single_score)(self, i, X, return_demass)
             for i in self.transformers_
         )
         return xp.average(xp.array(all_results), axis=0)

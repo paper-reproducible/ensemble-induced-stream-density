@@ -9,11 +9,8 @@ def get_samples(X, psi):
     X = xpUtils.unique(X)
     n = X.shape[0]
 
-    if psi < n:
-        new_indices = np.random.choice(n, size=(psi), replace=False).tolist()
-        return xp.take(X, new_indices, axis=0)
-    else:
-        return xp.copy(X)
+    new_indices = np.random.choice(n, size=(psi), replace=False).tolist()
+    return xp.take(X, new_indices, axis=0)
 
 
 def update_samples(X, samples, start=0):

@@ -16,10 +16,8 @@ def _unique(X, xp=numpy):
 
 def _tensor_scatter_nd_update(X, indices, updates):
     X_ = X.copy()
-    if len(indices.shape) == 1:
-        X_[indices] = updates
-    elif len(indices.shape) == 2:
-        X_[tuple([indices[:, i] for i in range(indices.shape[1])])] = updates
+    X_[indices] = updates
+
     return X_
 
 
@@ -30,11 +28,7 @@ def _setup_xp(xpUtils, xp):
     setattr(xpUtils, "cast", lambda X, dtype: X.astype(dtype))
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype)
     setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
-    setattr(
-        xpUtils,
-        "gather_nd",
-        lambda X, indices: X[tuple([indices[:, i] for i in range(indices.shape[1])])],
-    )
+    setattr(xpUtils, "gather_nd", lambda X, indices: X[indices])
     return xp
 
 

@@ -70,23 +70,13 @@ class AdaptiveKernelDensityEstimator(BaseEstimator, DensityMixin):
             return self.preset_parallel
 
     def fit(self, X, y=None):
-        def loop_body(estimator, X):
-            estimator.fit(X)
-            return estimator
-
-        self.estimators = self.parallel()(
-            delayed(loop_body)(i, X) for i in self.estimators
-        )
+        self.parallel()(delayed(i.fit)(X) for i in self.estimators)
 
         self.fitted = X.shape[0]
         return self
 
     def partial_fit(self, X, y=None):
-        def loop_body(estimator, X):
-            estimator.partial_fit(X)
-            return estimator
-
-        self.parallel()(delayed(loop_body)(i, X) for i in self.estimators)
+        self.parallel()(delayed(i.partial_fit)(X) for i in self.estimators)
 
         self.fitted = self.fitted + X.shape[0]
         return self

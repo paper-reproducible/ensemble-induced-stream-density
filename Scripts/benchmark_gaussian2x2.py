@@ -82,20 +82,20 @@ def cluster_kde(psi, bw, parallel=None, t=200):
 
 
 def construct_estimators(parallel=None):
-    psis = [20, 50, 100, 200, 400]
-    # psis = [5]
+    # psis = [20, 50, 100, 200, 400]
+    psis = [5]
     dp = []
     dp += [cluster_di_demass(psi, parallel) for psi in psis]
-    dp += [cluster_di_iforest(psi, parallel) for psi in psis]
-    dp += [cluster_di_anne(psi, parallel) for psi in psis]
-    dp += [cluster_mass(psi, parallel) for psi in psis]
-    dp += [cluster_demass(psi, parallel) for psi in psis]
+    # dp += [cluster_di_iforest(psi, parallel) for psi in psis]
+    # dp += [cluster_di_anne(psi, parallel) for psi in psis]
+    # dp += [cluster_mass(psi, parallel) for psi in psis]
+    # dp += [cluster_demass(psi, parallel) for psi in psis]
 
-    bws = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]
-    # bws = [0.05]
+    # bws = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]
+    bws = [0.05]
     for bw in bws:
         dp += [cluster_race(psi, bw) for psi in psis]
-        dp += [cluster_kde(psi, bw, parallel) for psi in psis]
+        # dp += [cluster_kde(psi, bw, parallel) for psi in psis]
 
     return dp
 
@@ -187,17 +187,16 @@ def benchmark_gaussian2x2():
     # with Parallel(n_jobs=32, backend="loky") as parallel:
     # with Parallel(n_jobs=32, backend="multiprocessing") as parallel:
     # with Parallel(n_jobs=32, backend="threading") as parallel:
-    # with Parallel(n_jobs=32, prefer="threads") as parallel:
-    with Parallel(n_jobs=32, prefer="processes") as parallel:
+    with Parallel(n_jobs=1, prefer="threads") as parallel:
 
         stream = None
 
-        # if stream is None:
-        #     try:
-        #         xp, xpUtils = get_array_module_with_utils("tf.numpy")
-        #         stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
-        #     except:
-        #         pass
+        if stream is None:
+            try:
+                xp, xpUtils = get_array_module_with_utils("tf.numpy")
+                stream = ProbabilityStream(ball=True, xp=xp, linalg=xpUtils)
+            except:
+                pass
 
         if stream is None:
             try:
