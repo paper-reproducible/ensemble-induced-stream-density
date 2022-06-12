@@ -1,4 +1,3 @@
-import numpy
 from Common import get_array_module
 
 
@@ -34,7 +33,7 @@ def tree(X, l_rho, metric="minkowski", p=2):
 
 
 def peaks(l_link, l_gamma, k):
-    xp, _ = get_array_module(l_link)
+    xp, xpUtils = get_array_module(l_link)
     l_link = xp.copy(l_link)
     n = l_link.shape[0]
     if k > n:
@@ -46,8 +45,8 @@ def peaks(l_link, l_gamma, k):
     # print(l_gamma)
     if peaks_count < k:
         # peaks_mask[xp.argsort(l_gamma)[peaks_count - k :]] = True
-        peaks_mask = xp.where(
-            xp.arange(n) == xp.argsort(l_gamma)[peaks_count - k :], True, peaks_mask
+        peaks_mask = xpUtils.tensor_scatter_nd_update(
+            peaks_mask, xp.argsort(l_gamma)[peaks_count - k :], True
         )
         # l_link[peaks_mask] = l_n[peaks_mask]
         l_link = xp.where(peaks_mask, l_n, l_link)
@@ -66,6 +65,8 @@ def partition(l_link, peaks_mask, k):
     l_labels = l_link
 
     while xp.all(xp.any(xp.equal(l_peaks, l_ancients), axis=1)) == False:
+        if xp.all(l_ancients[:, 0] == xp.take(l_ancients[:, 0], l_ancients[:, 0])):
+            break
         l_labels = l_ancients[:, 0]
         l_labels = xp.take(l_labels, l_labels)
         l_ancients = xp.expand_dims(l_labels, axis=1)
@@ -178,9 +179,9 @@ class DensityPeak(BaseEstimator, ClusterMixin):
         if k == None:
             k = self.n_clusters
         peaks_mask, l_link, k = peaks(l_link, l_gamma, k)
-        mk, _ = get_array_module(k)
-        if mk != numpy:
-            k = k.get()
+        _, mkUtils = get_array_module(k)
+        if type(k) is not int:
+            k = mkUtils.asscalar(k)
         l_labels_full = partition(l_link, peaks_mask, k)
         self.tmp_all_lables_ = l_labels_full
         return l_labels_full[x_mask]
