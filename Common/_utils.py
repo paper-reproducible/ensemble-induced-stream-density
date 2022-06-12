@@ -5,8 +5,8 @@ def set_printoptions():
     np.set_printoptions(formatter={"float_kind": "{:.4f}".format})
 
 
-def func2obj(className, methodName, sample_func, **kwargs):
-    varList = sample_func.__code__.co_varnames
+def func2obj(className, methodName, func, **kwargs):
+    varList = func.__code__.co_varnames
     memberDict = {}
 
     def constructur(self):
@@ -14,14 +14,18 @@ def func2obj(className, methodName, sample_func, **kwargs):
 
     memberDict["__init__"] = constructur
     for varName in varList:
-        memberDict[varName] = kwargs[varName]
+        if varName in kwargs:
+            memberDict[varName] = kwargs[varName]
 
-    def sample(self):
+    def exec(self, **kwargs):
         params = []
         for varName in varList:
-            params = params + [getattr(self, varName)]
-        return sample_func(*params)
+            if varName in kwargs:
+                params = params + [kwargs[varName]]
+            elif varName in dir(self):
+                params = params + [getattr(self, varName)]
+        return func(*params)
 
-    memberDict[methodName] = sample
+    memberDict[methodName] = exec
     distClass = type(className, (object,), memberDict)
     return distClass()
