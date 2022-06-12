@@ -1,3 +1,4 @@
+from matplotlib.pyplot import axis
 import numpy as np
 
 from numbers import Number
@@ -6,7 +7,16 @@ from Common import ball_samples
 
 
 class ProbabilityStream:
-    def __init__(self, n_features=2, init_count=0, increment=1, base_count=10000, ball=False):
+    def __init__(
+        self,
+        n_features=2,
+        init_count=0,
+        increment=1,
+        base_count=10000,
+        ball=False,
+        xp=np,
+        linalg=np.linalg,
+    ):
         super().__init__()
 
         self.n_features = n_features
@@ -14,6 +24,8 @@ class ProbabilityStream:
         self.increment = increment
         self.base_count = base_count
         self.ball = ball
+        self.xp = xp
+        self.linalg = linalg
 
         self.reset(reset_pdf=True)
 
@@ -34,12 +46,10 @@ class ProbabilityStream:
             kwargs = {}
             for k in o["kwargs"]:
                 arg = o["kwargs"][k]
-                if isinstance(arg, (Number, np.ndarray)):
-                    kwargs[k] = arg
-                elif isinstance(arg, (LambdaType, FunctionType)):
+                if isinstance(arg, (LambdaType, FunctionType)):
                     kwargs[k] = arg(t)
                 else:
-                    raise ValueError("Invalid arg value or function: {}".format(arg))
+                    kwargs[k] = arg
             results.append(o["pdf"](X, kwargs))
         return results
 
@@ -58,27 +68,32 @@ class ProbabilityStream:
             )
 
     def _generate(self, t):
+        xp = self.xp
         n = self._get_increment(t)
         if n == 0:
             return None, None, 0
 
         if self.ball:
-            X = ball_samples(self.base_count, self.n_features)
+            X = ball_samples(
+                self.base_count, self.n_features, xp=self.xp, linalg=self.linalg
+            )
         else:
-            X = np.random.rand(self.base_count, self.n_features)
-            
-        probs = np.array(self._calc_unnormalised_densities(X, t))
-        p = np.sum(probs, axis=0)
-        p = p / np.sum(p)
+            X = xp.random.rand(self.base_count, self.n_features)
 
-        c = np.random.choice(self.base_count, n, p=p)
-        X = X[c, :]
-        y = np.argmax(probs[:, c], axis=0)
+        probs = xp.array(self._calc_unnormalised_densities(X, t))
+        p = xp.sum(probs, axis=0)
+        p = p / xp.sum(p)
+
+        c = np.random.choice(self.base_count, n, p=p).tolist()
+        X = xp.take(X, c, axis=0)
+        probs = xp.take(probs, c, axis=1)
+        y = xp.argmax(probs, axis=0)
         return X, y, n
 
     def current_truth(self, X):
-        probs = np.array(self._calc_unnormalised_densities(X, self.t))
-        y = np.argmax(probs, axis=0)
+        xp = self.xp
+        probs = xp.array(self._calc_unnormalised_densities(X, self.t))
+        y = xp.argmax(probs, axis=0)
         return y
 
     def next_tik(self, print_data=False):
@@ -90,14 +105,14 @@ class ProbabilityStream:
         return X, y, n
 
     def calc_accumulated_density(self, X, t_to, t_from=0):
+        xp = self.xp
         p = None
         for i in range(t_to - t_from):
             t = t_from + i
             n = self._get_increment(t)
             if n > 0:
                 probst = self._calc_unnormalised_densities(X, t)
-                pt = np.sum(probst, axis=0)
-                pt = pt / np.sum(pt)
+                pt = xp.sum(probst, axis=0)
+                pt = pt / xp.sum(pt)
                 p = pt * n if p is None else pt * n + p
-        return p / np.sum(p)
-
+        return p / xp.sum(p)

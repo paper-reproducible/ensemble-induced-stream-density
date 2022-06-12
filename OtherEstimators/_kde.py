@@ -5,7 +5,7 @@ from Common import ReservoirSamplingEstimator, get_array_module
 
 def gaussian(X):
     xp, _ = get_array_module(X)
-    return xp.exp(-0.5 * xp.sum(X ** 2, axis=1))
+    return xp.exp(-0.5 * xp.sum(X**2, axis=1))
 
 
 def kde(X, Y, bw, kernel_function):
@@ -17,10 +17,10 @@ def kde(X, Y, bw, kernel_function):
 
     X_Y = (X_ - Y_) / bw
 
-    K_X_Y = kernel_function(X_Y.reshape([n_X * n_Y, -1]))
-    K_X_Y = K_X_Y.reshape([n_X, n_Y])
+    K_X_Y = kernel_function(xp.reshape(X_Y, [n_X * n_Y, -1]))
+    K_X_Y = xp.reshape(K_X_Y, [n_X, n_Y])
 
-    return K_X_Y.sum(axis=1) / (n_Y * bw)
+    return xp.sum(K_X_Y, axis=1) / (n_Y * bw)
 
 
 KERNEL_GAUSSIAN = "gaussian"
@@ -65,22 +65,28 @@ class AdaptiveKernelDensityEstimator(BaseEstimator, DensityMixin):
 
     def parallel(self):
         if self.preset_parallel is None:
-            return Parallel(
-                n_jobs=self.n_jobs,
-                verbose=self.verbose,
-                prefer="threads"
-            )
+            return Parallel(n_jobs=self.n_jobs, verbose=self.verbose, prefer="threads")
         else:
             return self.preset_parallel
 
     def fit(self, X, y=None):
-        self.parallel()(delayed(i.fit)(X) for i in self.estimators)
+        def loop_body(estimator, X):
+            estimator.fit(X)
+            return estimator
+
+        self.estimators = self.parallel()(
+            delayed(loop_body)(i, X) for i in self.estimators
+        )
 
         self.fitted = X.shape[0]
         return self
 
     def partial_fit(self, X, y=None):
-        self.parallel()(delayed(i.partial_fit)(X) for i in self.estimators)
+        def loop_body(estimator, X):
+            estimator.partial_fit(X)
+            return estimator
+
+        self.parallel()(delayed(loop_body)(i, X) for i in self.estimators)
 
         self.fitted = self.fitted + X.shape[0]
         return self

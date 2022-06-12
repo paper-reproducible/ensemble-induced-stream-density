@@ -1,4 +1,3 @@
-import numpy
 from Common import get_array_module
 
 
@@ -10,25 +9,31 @@ def tree(X, l_rho, metric="minkowski", p=2):
 
     l_rho_desc = xp.argsort(0 - l_rho)
 
-    l_link = xp.arange(n)
-    l_delta = xp.zeros(n)
+    # l_link = xp.arange(n)
+    l_link = [i for i in range(n)]
+    # l_delta = xp.zeros(n)
+    l_delta = [0 for _ in range(n)]
     if metric == "minkowski" and p > 0:
         for i in range(1, n):
             idx = l_rho_desc[i]
             denser_idx = l_rho_desc[0:i]
-            l_dis = xp.sum((X[xp.array([idx]), :] - X[denser_idx, :]) ** p, axis=1)
+            # l_dis = xp.sum((X[xp.array([idx]), :] - X[denser_idx, :]) ** p, axis=1)
+            l_dis = xp.sum((xp.take(X, denser_idx, axis=0) - X[idx, :]) ** p, axis=1)
             l_dis = l_dis ** (1 / p)
             l_link[idx] = denser_idx[xp.argmin(l_dis)]
             l_delta[idx] = xp.min(l_dis)
     else:
         raise NotImplementedError()
 
+    l_link = xp.array(l_link)
+    l_delta = xp.array(l_delta)
+
     l_gamma = l_delta * l_rho
     return l_link, l_gamma, l_delta
 
 
 def peaks(l_link, l_gamma, k):
-    xp, _ = get_array_module(l_link)
+    xp, xpUtils = get_array_module(l_link)
     l_link = xp.copy(l_link)
     n = l_link.shape[0]
     if k > n:
@@ -39,8 +44,12 @@ def peaks(l_link, l_gamma, k):
     peaks_count = xp.sum(peaks_mask)
     # print(l_gamma)
     if peaks_count < k:
-        peaks_mask[xp.argsort(l_gamma)[peaks_count - k :]] = True
-        l_link[peaks_mask] = l_n[peaks_mask]
+        # peaks_mask[xp.argsort(l_gamma)[peaks_count - k :]] = True
+        peaks_mask = xpUtils.tensor_scatter_nd_update(
+            peaks_mask, xp.argsort(l_gamma)[peaks_count - k :], True
+        )
+        # l_link[peaks_mask] = l_n[peaks_mask]
+        l_link = xp.where(peaks_mask, l_n, l_link)
         peaks_count = xp.sum(peaks_mask)
     else:
         k = peaks_count
@@ -56,12 +65,15 @@ def partition(l_link, peaks_mask, k):
     l_labels = l_link
 
     while xp.all(xp.any(xp.equal(l_peaks, l_ancients), axis=1)) == False:
+        if xp.all(l_ancients[:, 0] == xp.take(l_ancients[:, 0], l_ancients[:, 0])):
+            break
         l_labels = l_ancients[:, 0]
-        l_labels = l_labels[l_labels]
+        l_labels = xp.take(l_labels, l_labels)
         l_ancients = xp.expand_dims(l_labels, axis=1)
 
     for i in range(k):
-        l_labels[l_labels == l_peaks[i]] = -i
+        # l_labels[l_labels == l_peaks[i]] = -i
+        l_labels = xp.where(l_labels == l_peaks[i], -i, l_labels)
     l_labels = 0 - l_labels
 
     return l_labels
@@ -101,7 +113,7 @@ class DensityPeak(BaseEstimator, ClusterMixin):
 
         if self.local_cache_ is None:
             m_test = X
-            x_mask = xp.ones(X.shape[0], dtype=xp.bool)
+            x_mask = xp.ones(X.shape[0], dtype=bool)
         else:
             m_test = xp.concatenate([self.local_cache_, X], axis=0)
             x_mask = xp.arange(m_test.shape[0]) >= self.local_cache_.shape[0]
@@ -154,7 +166,7 @@ class DensityPeak(BaseEstimator, ClusterMixin):
             xp, _ = get_array_module(X)
             if self.local_cache_ is None:
                 m_test = X
-                x_mask = xp.ones(X.shape[0], dtype=xp.bool)
+                x_mask = xp.ones(X.shape[0], dtype=bool)
             else:
                 m_test = xp.concatenate([self.local_cache_, X], axis=0)
                 x_mask = xp.arange(m_test.shape[0]) >= (m_test.shape[0] - X.shape[0])
@@ -167,9 +179,9 @@ class DensityPeak(BaseEstimator, ClusterMixin):
         if k == None:
             k = self.n_clusters
         peaks_mask, l_link, k = peaks(l_link, l_gamma, k)
-        mk, _ = get_array_module(k)
-        if mk != numpy:
-            k = k.get()
+        _, mkUtils = get_array_module(k)
+        if type(k) is not int:
+            k = mkUtils.asscalar(k)
         l_labels_full = partition(l_link, peaks_mask, k)
         self.tmp_all_lables_ = l_labels_full
         return l_labels_full[x_mask]

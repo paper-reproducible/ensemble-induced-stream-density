@@ -17,7 +17,9 @@ def get_boundaries(X, ball_scaled=True):
     return global_lower_boundary, global_upper_boundary
 
 
-class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin):
+class IsolationTree(
+    ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin
+):
     def __init__(self, psi):
         super().__init__(psi)
 
@@ -29,7 +31,7 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         return self
 
     def _isolation_split(self, lower_boundary, upper_boundary):
-        xp, _ = get_array_module(lower_boundary)
+        xp, xpUtils = get_array_module(lower_boundary)
 
         l_in = self._search(self.samples_, lower_boundary, upper_boundary)
         l_in = l_in[:, 0]  # only one node therefore one column
@@ -38,18 +40,20 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         elif xp.sum(l_in) < 1:
             raise Exception("There is no sample in this region!")
 
-        m_in = self.samples_[l_in, :]
+        m_in = xp.take(self.samples_, xp.where(l_in)[0], axis=0)
 
         l_dims = xp.where(xp.not_equal(xp.min(m_in, axis=0), xp.max(m_in, axis=0)))[0]
         split_dim = xp.random.randint(l_dims.shape[0])
         split_dim = l_dims[split_dim]
 
-        sample_values = xp.unique(m_in[:, split_dim])
+        sample_values = xpUtils.unique(m_in[:, split_dim])
         sample_values = xp.sort(sample_values)
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
         split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
 
-        if numpy.any(lower_boundary==split_value) or numpy.any(upper_boundary==split_value):
+        if numpy.any(lower_boundary == split_value) or numpy.any(
+            upper_boundary == split_value
+        ):
             print("wth")
 
         return False, split_dim, split_value, l_in
@@ -91,9 +95,7 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=xp.float
-        )
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
 
         self.samples_ = reservoir
         self.fitted = self.fitted + X.shape[0]
@@ -126,9 +128,11 @@ class IsolationTree(ReservoirSamplingEstimator, AxisParallelBinaryTree, Transfor
         if not xp.any(search_result):
             print("WTH")
         i_node_drop = l_leaf[search_result[0, :]][0]
-        self.samples_ = self.samples_[
-            xp.logical_not(xp.all(self.samples_ == drop_sample, axis=1)), :
-        ]
+        self.samples_ = xp.take(
+            self.samples_,
+            xp.where(xp.logical_not(xp.all(self.samples_ == drop_sample, axis=1)))[0],
+            axis=0,
+        )
         volume_drop = self.node_volumes_[i_node_drop]
         l_volumes_diff, l_keep = self.prune(i_node_drop)
 
@@ -156,7 +160,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             X, SO = rotate(X)
             self.SO_ = SO
         super().fit(X, y)
-        self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=xp.float)
+        self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=float)
         self.fitted = X.shape[0]
         # self.node_volumes_ = self.volumes() # included in fit
 
@@ -179,9 +183,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(
-            self.search(X), axis=0, dtype=xp.float
-        )
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
 
         self.samples_ = reservoir
         self.fitted = self.fitted + X.shape[0]
@@ -222,7 +224,6 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
         if return_demass:
             l_leaf_volumes = self.node_volumes_[self.node_is_leaf_]
             l_leaf_demass = l_leaf_mass / l_leaf_volumes
-            return l_leaf_demass[indices]
+            return xp.take(l_leaf_demass, indices)
         else:
-            return l_leaf_mass[indices]
-
+            return xp.take(l_leaf_mass, indices)

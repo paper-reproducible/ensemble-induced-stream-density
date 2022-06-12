@@ -3,6 +3,8 @@ Benchmark test and demo of ensemble-induced density estimators for data stream c
 
 Written by Xiaoyu Qin, Monash University, February 2022, version 1.0.
 
+Modified by Xiaoyu Qin, Monash University, June 2022, version 1.1.
+
 This software is under MPLv2. Please communicate with the author of this repository if you need to redistribute an altered version of this software.
 
 To successfully run the demo, please make sure that python 3.8+ was installed.
@@ -16,6 +18,11 @@ pip install -r requirements.txt
 ```
 
 If **CUDA** is supported, it is recommended to install **CuPy** to accelerate some parts of the algorithm.
+
+If **Tensorflow 2.7+** is supported, it could also be used to accelerate some parts of the algorithm, but the acceleration is not guaranteed. 
+According to the author's personal experience of running the experiments on a Macbook Pro with M1 Max, 
+using Tensorflow with GPU acceleration is slower than using Numpy with multiprocessing or multithreading, 
+however it is too hard to utilise both multiprocessing and GPU acceleration.
 
 If running **python** provided by a **conda** environment is preferred, it is recommended to use **miniforge**, especially when using Apple Silicon MacOS.
 
