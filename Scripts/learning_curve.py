@@ -41,6 +41,7 @@ def normalised_mse(y_true, y_pred):
 if __name__ == "__main__":
     from ArtificialStream._plot import scatter, plot
     import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
 
     dims = 2
 
@@ -76,21 +77,26 @@ if __name__ == "__main__":
     #                     print((k, psi, t))
 
     if dims == 2:
+        pp = PdfPages("egmm_learning_curve.pdf")
+
         n_guassians = 4
         mix = gaussian_mixture(n_guassians, dims)
         n = 10000
         X = mix.sample(n, dims)
-        X = np.sort(X)
         p_true = mix.prob(X)
 
         X_ = minMaxNormalise(X)
+        fig = plt.figure()
+        fig.suptitle("Normalised data")
+        scatter(X_[:, 0], X_[:, 1], fig=fig)
+        fig.savefig(pp, format="pdf")
 
         l_k = [4, 8, 16, 32, 64]
         # l_k = [4, 8, 16]
         l_psi = [500, 1000, 2000, 4000, 8000]
-        # l_psi = [5000]
-        # l_t = [100, 200, 400, 800, 1600]
-        l_t = [100, 200, 300, 400, 500]
+        # l_psi = [500, 1000, 2000]
+        l_t = [100, 200, 400]
+        # l_t = [100, 200]
         m_pred = np.zeros([len(l_k), len(l_psi), len(l_t), n])
         m_errors = np.zeros([len(l_k), len(l_psi), len(l_t)])
         # with Parallel(n_jobs=16, prefer="threads") as p:
@@ -107,7 +113,33 @@ if __name__ == "__main__":
                         m_errors[i_k, i_psi, i_t] = normalised_mse(p_true, p_pred)
 
         for i_t in range(len(l_t)):
-            plot(l_k, m_errors[:, 0, i_t], show=False)
+            t = l_t[i_t]
+
+            for i_k in range(len(l_k)):
+                k = l_k[i_k]
+
+                fig, ax = plt.subplots()
+                fig.suptitle("t=" + str(t) + ", k=" + str(k))
+                ax.set_ylabel("Mean Square Error")
+                ax.set_xlabel(r"$\psi$ (subsample records)")
+
+                plot(l_psi, m_errors[i_k, :, i_t], fig=fig, ax=ax, show=False)
+
+                fig.savefig(pp, format="pdf")
+
+            for i_psi in range(len(l_psi)):
+                psi = l_psi[i_psi]
+
+                fig, ax = plt.subplots()
+                fig.suptitle("t=" + str(t) + r", $\psi$=" + str(psi))
+                ax.set_ylabel("Mean Square Error")
+                ax.set_xlabel("k (Gaussian components)")
+
+                plot(l_k, m_errors[:, i_psi, i_t], fig=fig, ax=ax, show=False)
+
+                fig.savefig(pp, format="pdf")
+
+        pp.close()
 
         with pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
             "egmm_learning_curve.xlsx"
@@ -128,7 +160,6 @@ if __name__ == "__main__":
                         l_errors.append([k, psi, t, e])
 
             df_dynamic = pd.DataFrame(l_errors)
-            df_dynamic.to_excel(writer, "Errors (k, psi, t, e)")
+            df_dynamic.to_excel(writer, "Errors (k, psi, t, err)")
 
-    plt.show()
     print("done")
