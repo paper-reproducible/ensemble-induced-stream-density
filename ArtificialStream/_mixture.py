@@ -41,7 +41,7 @@ def _prepare_mix(xp, gen, pdf, **kwargs):
     return settings, run_gen, run_pdf
 
 
-def _normalise(X):
+def minMaxNormalise(X):
     X_ = X - np.min(X, axis=0, keepdims=True)
     X_ = X_ / np.max(X_, axis=0, keepdims=True)
     return X_
@@ -112,5 +112,5 @@ if __name__ == "__main__":
     X = mix.sample(10000, 2)
     print(type(X))
     print(mix.prob(X).shape)
-    X_ = _normalise(X)
+    X_ = minMaxNormalise(X)
     scatter(X_[:, 0], X_[:, 1])
