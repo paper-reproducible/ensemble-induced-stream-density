@@ -29,11 +29,6 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         self.psi = psi
         self.partitioning_type = partitioning_type
 
-    def __single_similarity(self, transformer, X):
-        xp, _ = get_array_module(X)
-        indices = transformer.transform(X)
-        return xp.equal(indices, indices.T)
-
     def transform(self, X, return_similarity=False):
         xp, xpUtils = get_array_module(X)
         n = X.shape[0]
@@ -41,7 +36,8 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         if return_similarity:
 
             def loop_body(estimator):
-                return self.__single_similarity(estimator, X)
+                indices = estimator.transform(X)
+                return xp.equal(indices, xp.transpose(indices))
 
             all_results = self.parallel()(
                 delayed(loop_body)(i) for i in self.transformers_

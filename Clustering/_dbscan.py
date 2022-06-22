@@ -68,7 +68,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         else:
             self.X_ = xp.concatenate([self.X_, X], axis=0)
         if self.metric in _ISOLATION:
-            self.transformer_.partial_fit(X)
+            self.transformer_.partial_fit(xpUtils.cast(X, dtype=self.dtype))
         return self
 
     def fit(self, X, y=None):
@@ -106,20 +106,24 @@ if __name__ == "__main__":
     tnp = tf.experimental.numpy
     tnp.experimental_enable_numpy_behavior()
 
-    # xp = tnp
-    xp = np
+    xp = tnp
+    # xp = np
 
     X = xp.expand_dims([2, 3, 8, 9, 100], axis=1)
     m = DBSCAN(eps=1.5, minPts=2)
     labels = m.fit_predict(X)
     print(labels)
 
-    m = DBSCAN(eps=0.2, minPts=2, metric="anne", psi=2, t=200)
-    labels = m.fit_predict(X)
-    print(labels)
+    from joblib import Parallel
 
-    from Common import ball_scale
+    with Parallel(n_jobs=32, prefer="processes") as parallel:
+        # with Parallel(n_jobs=32, prefer="threads") as parallel:
+        m = DBSCAN(eps=0.2, minPts=2, metric="anne", psi=2, t=200, parallel=parallel)
+        labels = m.fit_predict(X)
+        print(labels)
 
-    m = DBSCAN(eps=0.2, minPts=2, metric="iforest", psi=2, t=200)
-    labels = m.fit_predict(ball_scale(X))
-    print(labels)
+        from Common import ball_scale
+
+        m = DBSCAN(eps=0.2, minPts=2, metric="iforest", psi=2, t=200, parallel=parallel)
+        labels = m.fit_predict(ball_scale(X))
+        print(labels)
