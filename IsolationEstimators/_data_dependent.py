@@ -1,5 +1,5 @@
 from sklearn.base import TransformerMixin, DensityMixin
-from joblib import Parallel, delayed
+from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
 from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
@@ -8,14 +8,24 @@ from ._constants import ANNE, IFOREST
 
 
 class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
-    def __init__(self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0):
+    def __init__(
+        self,
+        psi,
+        t,
+        partitioning_type=IFOREST,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
+        metric="minkowski",
+        p=2,
+    ):
         if partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi)
+            base_transformer = VoronoiPartitioning(psi, metric, p)
         elif partitioning_type == IFOREST:
             base_transformer = IsolationTree(psi)
         else:
             raise NotImplementedError()
-        super().__init__(base_transformer, t, n_jobs, verbose)
+        super().__init__(base_transformer, t, n_jobs, verbose, parallel)
         self.psi = psi
         self.partitioning_type = partitioning_type
 
@@ -33,7 +43,9 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             def loop_body(estimator):
                 return self.__single_similarity(estimator, X)
 
-            all_results = Parallel()(delayed(loop_body)(i) for i in self.transformers_)
+            all_results = self.parallel()(
+                delayed(loop_body)(i) for i in self.transformers_
+            )
             return xp.average(xp.array(all_results), axis=0)
         else:
 
@@ -45,13 +57,22 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
                 )
                 return encoded
 
-            all_results = Parallel()(delayed(loop_body)(i) for i in self.transformers_)
+            all_results = self.parallel()(
+                delayed(loop_body)(i) for i in self.transformers_
+            )
             return xpUtils.hstack(all_results)
 
 
 class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     def __init__(
-        self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0, parallel=None, rotation=True
+        self,
+        psi,
+        t,
+        partitioning_type=IFOREST,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
+        rotation=True,
     ):
         if partitioning_type == IFOREST:
             base_transformer = IncrementalMassEstimationTree(psi, rotation)
@@ -66,13 +87,20 @@ class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         def loop_body(estimator):
             return estimator.score(X, return_demass)
 
-        all_results = Parallel()(delayed(loop_body)(i) for i in self.transformers_)
+        all_results = self.parallel()(delayed(loop_body)(i) for i in self.transformers_)
         return xp.average(xp.array(all_results), axis=0)
 
 
 class DEMassEstimator(MassEstimator):
     def __init__(
-        self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0, parallel=None, rotation=True
+        self,
+        psi,
+        t,
+        partitioning_type=IFOREST,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
+        rotation=True,
     ):
         super().__init__(psi, t, partitioning_type, n_jobs, verbose, parallel, rotation)
 

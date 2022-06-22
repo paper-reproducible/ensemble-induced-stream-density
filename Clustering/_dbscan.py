@@ -25,6 +25,9 @@ def dbscan(m_dis, eps, minPts):
 
 
 from sklearn.base import BaseEstimator, ClusterMixin
+from IsolationEstimators import IsolationTransformer
+
+_ISOLATION = ["anne", "iforest"]
 
 
 class DBSCAN(BaseEstimator, ClusterMixin):
@@ -34,7 +37,10 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         minPts,
         metric="minkowski",
         p=2,
+        psi=None,
+        t=1000,
         dtype=np.float32,
+        parallel=None,
     ):
         self.eps = eps
         self.minPts = minPts
@@ -42,6 +48,17 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         self.p = p
         self.X_ = None
         self.dtype = dtype
+        if self.metric in _ISOLATION:
+            self.transformer_ = IsolationTransformer(
+                psi,
+                t,
+                partitioning_type=metric,
+                parallel=parallel,
+                metric="minkowski",
+                p=p,
+            )
+        elif metric != "minkowski":
+            raise NotImplementedError()
         return
 
     def partial_fit(self, X, y=None):
@@ -50,21 +67,31 @@ class DBSCAN(BaseEstimator, ClusterMixin):
             self.X_ = xpUtils.cast(X, dtype=self.dtype)
         else:
             self.X_ = xp.concatenate([self.X_, X], axis=0)
+        if self.metric in _ISOLATION:
+            self.transformer_.partial_fit(X)
         return self
 
     def fit(self, X, y=None):
         return self.partial_fit(X, y)
 
     def predict(self, X, y=None):
-        if X is not None or self.metric != "minkowski":
+        if X is not None:
             raise NotImplementedError()
 
         xp, xpUtils = get_array_module(self.X_)
-        m_dis = xpUtils.norm(
-            xp.expand_dims(self.X_, axis=0) - xp.expand_dims(self.X_, axis=1),
-            ord=self.p,
-            axis=2,
-        )
+        if self.metric == "minkowski":
+            m_dis = xpUtils.norm(
+                xp.expand_dims(self.X_, axis=0) - xp.expand_dims(self.X_, axis=1),
+                ord=self.p,
+                axis=2,
+            )
+        elif _ISOLATION.index(self.metric) >= 0:
+            m_dis = xp.subtract(
+                1, self.transformer_.transform(self.X_, return_similarity=True)
+            )
+        else:
+            raise NotImplementedError()
+
         y, _ = dbscan(m_dis, self.eps, self.minPts)
 
         return y
@@ -78,13 +105,21 @@ if __name__ == "__main__":
 
     tnp = tf.experimental.numpy
     tnp.experimental_enable_numpy_behavior()
-    xp = tnp
 
-    # import numpy as np
-
-    # xp = np
+    # xp = tnp
+    xp = np
 
     X = xp.expand_dims([2, 3, 8, 9, 100], axis=1)
     m = DBSCAN(eps=1.5, minPts=2)
     labels = m.fit_predict(X)
+    print(labels)
+
+    m = DBSCAN(eps=0.2, minPts=2, metric="anne", psi=2, t=200)
+    labels = m.fit_predict(X)
+    print(labels)
+
+    from Common import ball_scale
+
+    m = DBSCAN(eps=0.2, minPts=2, metric="iforest", psi=2, t=200)
+    labels = m.fit_predict(ball_scale(X))
     print(labels)
