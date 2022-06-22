@@ -86,9 +86,9 @@ class DBSCAN(BaseEstimator, ClusterMixin):
                 axis=2,
             )
         elif _ISOLATION.index(self.metric) >= 0:
-            m_dis = xp.subtract(
-                1, self.transformer_.transform(self.X_, return_similarity=True)
-            )
+            # encoded = self.transformer_.transform(self.X_)
+            m_sim = self.transformer_.transform(self.X_, return_similarity=True)
+            m_dis = xp.subtract(1, m_sim)
         else:
             raise NotImplementedError()
 
@@ -116,8 +116,8 @@ if __name__ == "__main__":
 
     from joblib import Parallel
 
-    with Parallel(n_jobs=32, prefer="processes") as parallel:
-        # with Parallel(n_jobs=32, prefer="threads") as parallel:
+    # with Parallel(n_jobs=32, prefer="processes") as parallel:
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
         m = DBSCAN(eps=0.2, minPts=2, metric="anne", psi=2, t=200, parallel=parallel)
         labels = m.fit_predict(X)
         print(labels)

@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.base import TransformerMixin, DensityMixin
 from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
@@ -37,7 +38,10 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
 
             def loop_body(estimator):
                 indices = estimator.transform(X)
-                return xp.equal(indices, xp.transpose(indices))
+                if indices.shape[1] == 1:
+                    return xp.equal(indices, xp.transpose(indices))
+                elif indices.shape[1] == self.psi:
+                    return xp.matmul(indices, xp.transpose(indices))
 
             all_results = self.parallel()(
                 delayed(loop_body)(i) for i in self.transformers_
@@ -47,11 +51,17 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
 
             def loop_body(estimator):
                 indices = estimator.transform(X)
-                encoded = xpUtils.coo_matrix(
-                    (xp.ones(n, dtype=float), (xp.arange(n), indices[:, 0])),
-                    shape=(n, self.psi),
-                )
-                return encoded
+                if indices.shape[1] == 1:
+                    encoded = xpUtils.coo_matrix(
+                        (
+                            xp.ones(n, dtype=float),
+                            (xp.arange(n), indices[:, 0]),
+                        ),
+                        shape=(n, self.psi),
+                    )
+                    return encoded
+                elif indices.shape[1] == self.psi:
+                    return indices
 
             all_results = self.parallel()(
                 delayed(loop_body)(i) for i in self.transformers_
