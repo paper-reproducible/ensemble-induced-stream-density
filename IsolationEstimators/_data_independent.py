@@ -15,8 +15,8 @@ def _single_fit(transformer, X):
     transformer.fit(samples)
     indices = transformer.transform(X)
     transformer.region_mass_ = xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
-        axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=0)),
+        axis=0,
     )
     return transformer
 
@@ -25,8 +25,8 @@ def _single_partial_fit(transformer, X):
     xp, _ = get_array_module(X)
     indices = transformer.transform(X)
     transformer.region_mass_ = transformer.region_mass_ + xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
-        axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=0)),
+        axis=0,
     )
     return transformer
 
@@ -44,9 +44,9 @@ def _single_score(partitioning_type, transformer, X, return_demass):
         region_demass = (
             xpUtils.cast(region_mass, dtype=np.dtype(float)) / region_volumes
         )
-        return xp.take(region_demass, xp.squeeze(indices, axis=0))
+        return xp.take(region_demass, xp.squeeze(indices, axis=1))
     else:
-        return xp.take(region_mass, xp.squeeze(indices, axis=0))
+        return xp.take(region_mass, xp.squeeze(indices, axis=1))
 
 
 class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
