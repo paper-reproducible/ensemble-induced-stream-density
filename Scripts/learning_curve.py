@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import mean_squared_error as mse
 from ArtificialStream._mixture import Mixture, minMaxNormalise
+from Common import call_by_argv
 
 _parallel = Parallel(n_jobs=1, prefer="threads")
 
@@ -38,128 +39,77 @@ def normalised_mse(y_true, y_pred):
     return mse(y_true, y_pred)
 
 
-if __name__ == "__main__":
-    from ArtificialStream._plot import scatter, plot
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_pdf import PdfPages
+current_folder = "./"
+excel_filename = "egmm_learning_curve.xlsx"
 
-    dims = 2
 
-    # if dims == 1:
-    #     n_guassians = 4
-    #     mix = gaussian_mixture(n_guassians, dims)
-    #     n = 10000
-    #     X = mix.sample(n, dims)
-    #     X = np.sort(X)
-    #     p_true = mix.prob(X)
+def learning_curve(
+    folder=current_folder, n=10000, dims=2, n_guassians=4, debug=False, show_data=False
+):
+    import os.path
 
-    #     X_ = minMaxNormalise(X)
-    #     scatter(X_[:, 0], minMaxNormalise(p_true))
+    if not folder.endswith("/"):
+        folder += "/"
+    if not os.path.isdir(folder):
+        raise Exception("Destination folder (" + folder + ") does not exist")
 
-    #     # l_k = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-    #     l_k = [8, 16]
-    #     # l_psi = [1000, 2000, 4000, 8000]
-    #     l_psi = [2000]
-    #     # l_t = [100, 200, 400, 800, 1600]
-    #     l_t = [100, 200]
-    #     m_pred = np.zeros([len(l_k), len(l_psi), len(l_t), n])
-    #     with Parallel(n_jobs=16, prefer="threads") as p:
-    #         for i_k in range(len(l_k)):
-    #             k = l_k[i_k]
-    #             for i_psi in range(len(l_psi)):
-    #                 psi = l_psi[i_psi]
-    #                 for i_t in range(len(l_t)):
-    #                     t = l_t[i_t]
-    #                     p_pred = egmm_dens(X, k, psi, t, p)
-    #                     m_pred[i_k, i_psi, i_t, :] = p_pred
+    mix = gaussian_mixture(n_guassians, dims)
+    X = mix.sample(n, dims)
+    p_true = mix.prob(X)
 
-    #                     scatter(X_[:, 0], minMaxNormalise(p_pred))
-    #                     print((k, psi, t))
-
-    if dims == 2:
-        pp = PdfPages("egmm_learning_curve.pdf")
-
-        n_guassians = 4
-        mix = gaussian_mixture(n_guassians, dims)
-        n = 10000
-        X = mix.sample(n, dims)
-        p_true = mix.prob(X)
+    if show_data:
+        import matplotlib.pyplot as plt
+        from ArtificialStream._plot import scatter
 
         X_ = minMaxNormalise(X)
         fig = plt.figure()
         fig.suptitle("Normalised data")
         scatter(X_[:, 0], X_[:, 1], fig=fig)
-        fig.savefig(pp, format="pdf")
 
-        l_k = [4, 8, 16, 32, 64]
-        # l_k = [4, 8, 16]
-        l_psi = [500, 1000, 2000, 4000, 8000]
-        # l_psi = [500, 1000, 2000]
-        l_t = [100, 200, 400]
-        # l_t = [100, 200]
-        m_pred = np.zeros([len(l_k), len(l_psi), len(l_t), n])
-        m_errors = np.zeros([len(l_k), len(l_psi), len(l_t)])
-        # with Parallel(n_jobs=16, prefer="threads") as p:
-        with Parallel(n_jobs=16, prefer="processes") as p:
-            for i_k in range(len(l_k)):
-                k = l_k[i_k]
-                for i_psi in range(len(l_psi)):
-                    psi = l_psi[i_psi]
-                    for i_t in range(len(l_t)):
-                        t = l_t[i_t]
-                        print(k, psi, t)
-                        p_pred = egmm_dens(X, k, psi, t, p)
-                        m_pred[i_k, i_psi, i_t, :] = p_pred
-                        m_errors[i_k, i_psi, i_t] = normalised_mse(p_true, p_pred)
+    l_k = [4, 8, 16] if debug else [4, 8, 16, 32, 64]
+    l_psi = [500, 1000, 2000] if debug else [500, 1000, 2000, 4000, 8000]
+    l_t = [100, 200] if debug else [100, 200, 400]
 
-        for i_t in range(len(l_t)):
-            t = l_t[i_t]
+    ll_pred = []
+    ll_pred.append([-1, -1, -1] + p_true.tolist())
+    ll_errors = []
 
-            for i_k in range(len(l_k)):
-                k = l_k[i_k]
+    with (
+        Parallel(n_jobs=1, prefer="threads")
+        if debug
+        else Parallel(n_jobs=16, prefer="processes")
+    ) as p:
+        for k in l_k:
+            for psi in l_psi:
+                for t in l_t:
+                    print(k, psi, t)
 
-                fig, ax = plt.subplots()
-                fig.suptitle("t=" + str(t) + ", k=" + str(k))
-                ax.set_ylabel("Mean Square Error")
-                ax.set_xlabel(r"$\psi$ (subsample records)")
+                    p_pred = egmm_dens(X, k, psi, t, p)
+                    ll_pred.append([k, psi, t] + p_pred.tolist())
 
-                plot(l_psi, m_errors[i_k, :, i_t], fig=fig, ax=ax, show=False)
+                    mse = normalised_mse(p_true, p_pred)
+                    ll_errors.append([k, psi, t, mse])
 
-                fig.savefig(pp, format="pdf")
+    with pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
+        folder + excel_filename
+    ) as writer:
 
-            for i_psi in range(len(l_psi)):
-                psi = l_psi[i_psi]
+        df_X = pd.DataFrame(X)
+        df_X.columns = ["dim_" + str(i) for i in range(dims)]
+        df_X.to_excel(writer, sheet_name="X")
 
-                fig, ax = plt.subplots()
-                fig.suptitle("t=" + str(t) + r", $\psi$=" + str(psi))
-                ax.set_ylabel("Mean Square Error")
-                ax.set_xlabel("k (Gaussian components)")
+        df_pred = pd.DataFrame(ll_pred)
+        df_pred.columns = ["k", "psi", "t"] + [str(i) for i in range(n)]
+        df_pred.to_excel(writer, sheet_name="Density")
 
-                plot(l_k, m_errors[:, i_psi, i_t], fig=fig, ax=ax, show=False)
+        df_error = pd.DataFrame(ll_errors)
+        df_error.columns = ["k", "psi", "t", "mse"]
+        df_error.to_excel(writer, sheet_name="Errors")
 
-                fig.savefig(pp, format="pdf")
+    return
 
-        pp.close()
 
-        with pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
-            "egmm_learning_curve.xlsx"
-        ) as writer:
-
-            df_X = pd.DataFrame(X)
-            df_X.to_excel(writer, sheet_name="X")
-
-            l_errors = []
-
-            for i_k in range(len(l_k)):
-                k = l_k[i_k]
-                for i_psi in range(len(l_psi)):
-                    psi = l_psi[i_psi]
-                    for i_t in range(len(l_t)):
-                        t = l_t[i_t]
-                        e = m_errors[i_k, i_psi, i_t]
-                        l_errors.append([k, psi, t, e])
-
-            df_dynamic = pd.DataFrame(l_errors)
-            df_dynamic.to_excel(writer, "Errors (k, psi, t, err)")
-
+if __name__ == "__main__":
+    # PYTHONPATH=. python Scripts/learning_curve.py ./ debug=True show_data=True
+    call_by_argv(learning_curve)
     print("done")

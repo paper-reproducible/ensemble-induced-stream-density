@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 
 
@@ -29,3 +30,28 @@ def func2obj(className, methodName, func, **kwargs):
     memberDict[methodName] = exec
     distClass = type(className, (object,), memberDict)
     return distClass()
+
+
+def call_by_argv(func, start=1):
+    args = []
+    kwargs = {}
+    parse_v = (
+        lambda v: True
+        if v == "True"
+        else False
+        if v == "False"
+        else float(v)
+        if v.isdecimal()
+        else v
+    )
+    for arg_str in sys.argv[start:]:
+        kv = arg_str.split("=")
+        if len(kv) == 1:
+            [v] = kv
+            args.append(parse_v(v))
+
+        if len(kv) == 2:
+            [k, v] = kv
+            kwargs[k] = parse_v(v)
+
+    return func(*args, **kwargs)
