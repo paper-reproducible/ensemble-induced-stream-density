@@ -44,16 +44,20 @@ excel_filename = "egmm_learning_curve.xlsx"
 
 
 def learning_curve(
-    folder=current_folder, n=10000, dims=2, n_guassians=4, debug=False, show_data=False
+    folder=current_folder, n=10000, dims=2, n_gaussians=4, debug=False, show_data=False
 ):
     import os.path
+
+    n = int(n)
+    dims = int(dims)
+    n_gaussians = int(n_gaussians)
 
     if not folder.endswith("/"):
         folder += "/"
     if not os.path.isdir(folder):
         raise Exception("Destination folder (" + folder + ") does not exist")
 
-    mix = gaussian_mixture(n_guassians, dims)
+    mix = gaussian_mixture(n_gaussians, dims)
     X = mix.sample(n, dims)
     p_true = mix.prob(X)
 
