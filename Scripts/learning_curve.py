@@ -24,7 +24,6 @@ def egmm_dens(X, k, psi=5000, t=1000, paralell=_parallel):
 def demass(X, psi, t=1000, parallel=_parallel):
     from IsolationEstimators import DEMassEstimator
 
-    X = ball_scale(X)
     e = DEMassEstimator(psi, t, parallel=parallel)
     e.fit(X)
     probs = e.score(X)
@@ -51,6 +50,96 @@ def normalised_mse(y_true, y_pred):
 
 current_folder = "./"
 excel_filename = "egmm_learning_curve.xlsx"
+
+
+def benchmark_egmm(X, p_true, excel_writer, parallel, debug=False):
+    n = X.shape[0]
+    l_k = [4, 8, 16] if debug else [4, 8, 16, 32, 64]
+    l_psi = [500, 1000, 2000] if debug else [500, 1000, 2000, 4000, 8000]
+    l_t = [100, 200] if debug else [100, 200, 400]
+
+    ll_pred = []
+    ll_pred.append([-1, -1, -1] + p_true.tolist())
+    ll_errors = []
+    for k in l_k:
+        for psi in l_psi:
+            for t in l_t:
+                print("EGMM", k, psi, t)
+
+                p_pred = egmm_dens(X, k, psi, t, parallel)
+                ll_pred.append([k, psi, t] + p_pred.tolist())
+
+                mse = normalised_mse(p_true, p_pred)
+                ll_errors.append([k, psi, t, mse])
+
+    df_pred = pd.DataFrame(ll_pred)
+    df_pred.columns = ["k", "psi", "t"] + [str(i) for i in range(n)]
+    df_pred.to_excel(excel_writer, sheet_name="Density (EGMM)")
+
+    df_error = pd.DataFrame(ll_errors)
+    df_error.columns = ["k", "psi", "t", "mse"]
+    df_error.to_excel(excel_writer, sheet_name="Errors (EGMM)")
+
+
+def benchmark_demass(X, p_true, excel_writer, parallel, debug=False):
+    n = X.shape[0]
+    X = ball_scale(X)
+    l_psi = [4, 8, 16] if debug else [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    l_t = [100, 200] if debug else [100, 200, 400]
+
+    ll_pred = []
+    ll_pred.append([-1, -1] + p_true.tolist())
+    ll_errors = []
+    for psi in l_psi:
+        for t in l_t:
+            print("DEMass", psi, t)
+
+            p_pred = demass(X, psi, t, parallel)
+            ll_pred.append([psi, t] + p_pred.tolist())
+
+            mse = normalised_mse(p_true, p_pred)
+            ll_errors.append([psi, t, mse])
+
+    df_pred = pd.DataFrame(ll_pred)
+    df_pred.columns = ["psi", "t"] + [str(i) for i in range(n)]
+    df_pred.to_excel(excel_writer, sheet_name="Density (DEMass)")
+
+    df_error = pd.DataFrame(ll_errors)
+    df_error.columns = ["psi", "t", "mse"]
+    df_error.to_excel(excel_writer, sheet_name="Errors (DEMass)")
+
+
+def benchmark_kde(X, p_true, excel_writer, debug=False):
+    n = X.shape[0]
+    from sklearn.neighbors import KernelDensity
+
+    X = minMaxNormalise(X)
+    l_bw = (
+        [0.01, 0.99]
+        if debug
+        else [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]
+    )
+
+    ll_pred = []
+    ll_pred.append([-1] + p_true.tolist())
+    ll_errors = []
+    for bw in l_bw:
+        print("KDE", bw)
+
+        p_pred = KernelDensity(kernel="gaussian", bandwidth=0.2).fit(X).score_samples(X)
+        p_pred = np.exp(p_pred)
+        ll_pred.append([bw] + p_pred.tolist())
+
+        mse = normalised_mse(p_true, p_pred)
+        ll_errors.append([bw, mse])
+
+    df_pred = pd.DataFrame(ll_pred)
+    df_pred.columns = ["bw"] + [str(i) for i in range(n)]
+    df_pred.to_excel(excel_writer, sheet_name="Density (KDE)")
+
+    df_error = pd.DataFrame(ll_errors)
+    df_error.columns = ["bw", "mse"]
+    df_error.to_excel(excel_writer, sheet_name="Errors (KDE)")
 
 
 def learning_curve(
@@ -93,59 +182,9 @@ def learning_curve(
             if debug
             else Parallel(n_jobs=16, prefer="processes")
         ) as p:
-            # EGMM
-            l_k = [4, 8, 16] if debug else [4, 8, 16, 32, 64]
-            l_psi = [500, 1000, 2000] if debug else [500, 1000, 2000, 4000, 8000]
-            l_t = [100, 200] if debug else [100, 200, 400]
-
-            ll_pred = []
-            ll_pred.append([-1, -1, -1] + p_true.tolist())
-            ll_errors = []
-            for k in l_k:
-                for psi in l_psi:
-                    for t in l_t:
-                        print("EGMM", k, psi, t)
-
-                        p_pred = egmm_dens(X, k, psi, t, p)
-                        ll_pred.append([k, psi, t] + p_pred.tolist())
-
-                        mse = normalised_mse(p_true, p_pred)
-                        ll_errors.append([k, psi, t, mse])
-
-            df_pred = pd.DataFrame(ll_pred)
-            df_pred.columns = ["k", "psi", "t"] + [str(i) for i in range(n)]
-            df_pred.to_excel(writer, sheet_name="Density (EGMM)")
-
-            df_error = pd.DataFrame(ll_errors)
-            df_error.columns = ["k", "psi", "t", "mse"]
-            df_error.to_excel(writer, sheet_name="Errors (EGMM)")
-
-            # DEMass
-            l_psi = (
-                [4, 8, 16] if debug else [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-            )
-            l_t = [100, 200] if debug else [100, 200, 400]
-
-            ll_pred = []
-            ll_pred.append([-1, -1] + p_true.tolist())
-            ll_errors = []
-            for psi in l_psi:
-                for t in l_t:
-                    print("DEMass", psi, t)
-
-                    p_pred = demass(X, psi, t, p)
-                    ll_pred.append([psi, t] + p_pred.tolist())
-
-                    mse = normalised_mse(p_true, p_pred)
-                    ll_errors.append([psi, t, mse])
-
-            df_pred = pd.DataFrame(ll_pred)
-            df_pred.columns = ["psi", "t"] + [str(i) for i in range(n)]
-            df_pred.to_excel(writer, sheet_name="Density (DEMass)")
-
-            df_error = pd.DataFrame(ll_errors)
-            df_error.columns = ["psi", "t", "mse"]
-            df_error.to_excel(writer, sheet_name="Errors (DEMass)")
+            benchmark_egmm(X, p_true, writer, p, debug)
+            benchmark_demass(X, p_true, writer, p, debug)
+            benchmark_kde(X, p_true, writer, debug)
 
     return
 
