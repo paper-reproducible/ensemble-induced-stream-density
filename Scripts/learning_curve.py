@@ -54,8 +54,12 @@ excel_filename = "egmm_learning_curve.xlsx"
 
 def benchmark_egmm(X, p_true, excel_writer, parallel, debug=False):
     n = X.shape[0]
-    l_k = [4, 8, 16] if debug else [4, 8, 16, 32, 64]
-    l_psi = [500, 1000, 2000] if debug else [500, 1000, 2000, 4000, 8000]
+    l_k = [4, 8, 16] if debug else [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    l_psi = (
+        [100, 200, 300]
+        if debug
+        else [3000, 3500, 4000, 4500, 5000, 6500, 7000, 7500, 8000, 8500]
+    )
     l_t = [100, 200] if debug else [100, 200, 400]
 
     ll_pred = []
@@ -126,7 +130,7 @@ def benchmark_kde(X, p_true, excel_writer, debug=False):
     for bw in l_bw:
         print("KDE", bw)
 
-        p_pred = KernelDensity(kernel="gaussian", bandwidth=0.2).fit(X).score_samples(X)
+        p_pred = KernelDensity(kernel="gaussian", bandwidth=bw).fit(X).score_samples(X)
         p_pred = np.exp(p_pred)
         ll_pred.append([bw] + p_pred.tolist())
 
