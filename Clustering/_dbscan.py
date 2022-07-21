@@ -27,7 +27,7 @@ def dbscan(m_dis, eps, minPts):
 from sklearn.base import BaseEstimator, ClusterMixin
 from IsolationEstimators import IsolationTransformer
 
-_ISOLATION = ["anne", "iforest"]
+_ISOLATION = ["anne", "iforest", "fuzzi"]
 
 
 class DBSCAN(BaseEstimator, ClusterMixin):
@@ -92,6 +92,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         else:
             raise NotImplementedError()
 
+        # print(self.metric, m_dis * 1000)
         y, _ = dbscan(m_dis, self.eps, self.minPts)
 
         return y
@@ -112,18 +113,24 @@ if __name__ == "__main__":
     X = xp.expand_dims([2, 3, 8, 9, 100], axis=1)
     m = DBSCAN(eps=1.5, minPts=2)
     labels = m.fit_predict(X)
-    print(labels)
+    print("l2:", labels)
 
     from joblib import Parallel
 
+    np.set_printoptions(precision=2)
+
     # with Parallel(n_jobs=32, prefer="processes") as parallel:
     with Parallel(n_jobs=32, prefer="threads") as parallel:
+        m = DBSCAN(eps=0.99, minPts=2, metric="fuzzi", psi=2, t=200, parallel=parallel)
+        labels = m.fit_predict(X)
+        print("fuzzi:", labels)
+
         m = DBSCAN(eps=0.2, minPts=2, metric="anne", psi=2, t=200, parallel=parallel)
         labels = m.fit_predict(X)
-        print(labels)
+        print("anne:", labels)
 
         from Common import ball_scale
 
         m = DBSCAN(eps=0.2, minPts=2, metric="iforest", psi=2, t=200, parallel=parallel)
         labels = m.fit_predict(ball_scale(X))
-        print(labels)
+        print("iforest", labels)

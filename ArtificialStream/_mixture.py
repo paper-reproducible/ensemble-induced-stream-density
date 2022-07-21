@@ -47,6 +47,18 @@ def minMaxNormalise(X):
     return X_
 
 
+def gaussian_mixture(n_components, dims, xp=np):
+    mix = Mixture(xp=xp)
+    l = np.random.rand(n_components, dims + 2)
+    for i in range(n_components):
+        loc = l[i, :dims]
+        scale = l[i, dims] / n_components
+        weight = l[i, dims + 1]
+        mix.add(weight, "gaussian", loc=loc, scale=scale)
+
+    return mix
+
+
 class Mixture:
     def __init__(self, xp=np):
         self.generators = []

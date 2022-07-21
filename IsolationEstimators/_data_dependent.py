@@ -4,8 +4,9 @@ from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
 from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
+from ._kernel_fuzzy import FuzzyINNPartitioning
 from Common import get_array_module
-from ._constants import ANNE, IFOREST
+from ._constants import ANNE, IFOREST, FUZZI
 
 
 class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
@@ -24,6 +25,8 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             base_transformer = VoronoiPartitioning(psi, metric, p)
         elif partitioning_type == IFOREST:
             base_transformer = IsolationTree(psi)
+        elif partitioning_type == FUZZI:
+            base_transformer = FuzzyINNPartitioning(psi)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)

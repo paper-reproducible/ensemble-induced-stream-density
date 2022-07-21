@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import mean_squared_error as mse
-from ArtificialStream._mixture import Mixture, minMaxNormalise
+from ArtificialStream._mixture import gaussian_mixture, minMaxNormalise
 from Common import call_by_argv, ball_scale
 
 _parallel = Parallel(n_jobs=1, prefer="threads")
@@ -28,18 +28,6 @@ def demass(X, psi, t=1000, parallel=_parallel):
     e.fit(X)
     probs = e.score(X)
     return probs
-
-
-def gaussian_mixture(n_components, dims):
-    mix = Mixture()
-    l = np.random.rand(n_components, dims + 2)
-    for i in range(n_components):
-        loc = l[i, :dims]
-        scale = l[i, dims] / n_components
-        weight = l[i, dims + 1]
-        mix.add(weight, "gaussian", loc=loc, scale=scale)
-
-    return mix
 
 
 def normalised_mse(y_true, y_pred):
