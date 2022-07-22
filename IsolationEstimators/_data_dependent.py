@@ -20,13 +20,14 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         parallel=None,
         metric="minkowski",
         p=2,
+        **kwargs
     ):
         if partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi, metric, p)
+            base_transformer = VoronoiPartitioning(psi, metric, p, **kwargs)
         elif partitioning_type == IFOREST:
-            base_transformer = IsolationTree(psi)
+            base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == FUZZI:
-            base_transformer = FuzziPartitioning(psi)
+            base_transformer = FuzziPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)

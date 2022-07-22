@@ -1,5 +1,3 @@
-# kernel fuzzy 'partitioning'
-from logging import root
 import numpy as np
 from sklearn.base import TransformerMixin
 from Common import ReservoirSamplingEstimator, get_array_module
@@ -20,11 +18,12 @@ def _batch_gaussian(X, locs, scales):
 
 
 class FuzziPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, kernel=_gaussian):
+    def __init__(self, psi, kernel=_gaussian, random_scale=False):
         super().__init__(psi)
         if kernel not in _kernels:
-            raise Exception("This kernel is not supported.")
+            raise NotImplementedError("This kernel is not supported.")
         self.kernel = kernel
+        self.random_scale = random_scale
 
     def partial_fit(self, X, y=None):
         super().partial_fit(X, y)
@@ -35,6 +34,8 @@ class FuzziPartitioning(ReservoirSamplingEstimator, TransformerMixin):
         if self.kernel == _gaussian:
             locs = self.samples_  # [psi, dims]
             scales = xp.sort(xpUtils.pdist(locs, locs), axis=1)[:, 1]  # [psi]
+            if self.random_scale:
+                scales = scales * xp.random.rand()
             return _batch_gaussian(X, locs, scales)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("This kernel is not supported.")

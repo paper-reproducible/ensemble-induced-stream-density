@@ -41,6 +41,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         t=1000,
         dtype=np.float32,
         parallel=None,
+        **kwargs
     ):
         self.eps = eps
         self.minPts = minPts
@@ -56,6 +57,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
                 parallel=parallel,
                 metric="minkowski",
                 p=p,
+                **kwargs,
             )
         elif metric != "minkowski":
             raise NotImplementedError()
@@ -102,13 +104,13 @@ class DBSCAN(BaseEstimator, ClusterMixin):
 
 
 if __name__ == "__main__":
-    import tensorflow as tf
+    # import tensorflow as tf
 
-    tnp = tf.experimental.numpy
-    tnp.experimental_enable_numpy_behavior()
+    # tnp = tf.experimental.numpy
+    # tnp.experimental_enable_numpy_behavior()
 
-    xp = tnp
-    # xp = np
+    # xp = tnp
+    xp = np
 
     X = xp.expand_dims([2, 3, 8, 9, 100], axis=1)
     m = DBSCAN(eps=1.5, minPts=2)
@@ -121,7 +123,15 @@ if __name__ == "__main__":
 
     # with Parallel(n_jobs=32, prefer="processes") as parallel:
     with Parallel(n_jobs=32, prefer="threads") as parallel:
-        m = DBSCAN(eps=0.99, minPts=2, metric="fuzzi", psi=2, t=200, parallel=parallel)
+        m = DBSCAN(
+            eps=0.99,
+            minPts=2,
+            metric="fuzzi",
+            psi=2,
+            t=200,
+            parallel=parallel,
+            random_scale=True,
+        )
         labels = m.fit_predict(X)
         print("fuzzi:", labels)
 

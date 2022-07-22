@@ -52,14 +52,21 @@ def _single_score(partitioning_type, transformer, X, return_demass):
 
 class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     def __init__(
-        self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0, parallel=None
+        self,
+        psi,
+        t,
+        partitioning_type=IFOREST,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
+        **kwargs
     ):
         if partitioning_type == IFOREST:
-            base_transformer = IsolationTree(psi)
+            base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi)
+            base_transformer = VoronoiPartitioning(psi, **kwargs)
         elif partitioning_type == FUZZI:
-            base_transformer = FuzziPartitioning(psi)
+            base_transformer = FuzziPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
