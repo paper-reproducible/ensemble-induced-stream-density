@@ -4,7 +4,7 @@ from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._isolation_tree import IsolationTree
 from ._voronoi import VoronoiPartitioning
-from ._kernel_fuzzy import FuzzyINNPartitioning
+from ._fuzzy import FuzziPartitioning
 from Common import get_array_module, ball_samples
 from ._constants import ANNE, IFOREST, FUZZI
 
@@ -59,7 +59,7 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         elif partitioning_type == ANNE:
             base_transformer = VoronoiPartitioning(psi)
         elif partitioning_type == FUZZI:
-            base_transformer = FuzzyINNPartitioning(psi)
+            base_transformer = FuzziPartitioning(psi)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
