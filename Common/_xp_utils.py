@@ -33,6 +33,16 @@ def _get_array_module_name(X):
     return _NP
 
 
+def _pdist(X, Y, p=2, root=True, xp=numpy):
+    result = xp.sum(
+        (xp.expand_dims(X, axis=1) - xp.expand_dims(Y, axis=0)) ** p,
+        axis=2,
+    )
+    if root:
+        result = result ** (1 / p)
+    return result
+
+
 def get_array_module_with_utils(arrayModuleName):
     utilsModuleName = _XPUTILS + "." + arrayModuleName
     if utilsModuleName in sys.modules:
@@ -53,6 +63,7 @@ def get_array_module_with_utils(arrayModuleName):
 
         xp = setup_numpy(xpUtils)
     setattr(xpUtils, "asscalar", lambda X: numpy.asscalar(xpUtils.to_numpy(X)))
+    setattr(xpUtils, "pdist", lambda X, Y, p=2, root=True: _pdist(X, Y, p, root, xp))
     return xp, xpUtils
 
 

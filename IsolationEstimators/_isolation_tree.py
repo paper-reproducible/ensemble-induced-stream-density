@@ -143,8 +143,8 @@ class IsolationTree(
     def transform(self, X):
         xp, _ = get_array_module(X)
         l_in = self.search(X, self.node_is_leaf_)
-        indices = xp.where(l_in)[1]  # 1 is the axis to "reduce"
-        indices = xp.expand_dims(indices, axis=0)
+        _, indices = xp.where(l_in)
+        indices = xp.expand_dims(indices, axis=1)
         return indices
 
 

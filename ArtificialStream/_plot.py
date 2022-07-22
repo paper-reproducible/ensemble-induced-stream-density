@@ -2,13 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot(l_x, l_y, l_label=None, show=True):
-    fig = plt.figure()
-    ax = plt.axes()
+def plot(l_x, l_y, l_label=None, show=True, block=True, fig=None, ax=None):
+    if fig is None:
+        fig = plt.figure()
+    if ax is None:
+        ax = plt.axes()
     ax.plot(l_x, l_y, linewidth=1, label=l_label)
     plt.grid(True)
     if show:
-        plt.show()
+        plt.show(block=block)
     return fig, ax
 
 

@@ -30,7 +30,7 @@ class VoronoiPartitioning(ReservoirSamplingEstimator, TransformerMixin):
                     indices = xp.where(l_nearer, i, indices)
                     # l_dis_min[l_nearer] = l_dis[l_nearer]
                     l_dis_min = xp.where(l_nearer, l_dis, l_dis_min)
-            indices = xp.expand_dims(indices, axis=0)
+            indices = xp.expand_dims(indices, axis=1)
             return indices
         else:
             raise NotImplementedError()
