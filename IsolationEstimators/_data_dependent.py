@@ -5,8 +5,9 @@ from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
 from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
 from ._fuzzy import FuzziPartitioning
+from ._inn import INNPartitioning
 from Common import get_array_module
-from ._constants import ANNE, IFOREST, FUZZI
+from ._constants import ANNE, IFOREST, FUZZI, INNE
 
 
 class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
@@ -28,6 +29,8 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == FUZZI:
             base_transformer = FuzziPartitioning(psi, **kwargs)
+        elif partitioning_type == INNE:
+            base_transformer = INNPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
@@ -73,7 +76,7 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             return xpUtils.hstack(all_results)
 
 
-class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
+class IncrementalMassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     def __init__(
         self,
         psi,
@@ -86,7 +89,7 @@ class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     ):
         if partitioning_type == IFOREST:
             base_transformer = IncrementalMassEstimationTree(psi, rotation)
-        else:
+        else: # aNNE has no incremental implementation
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
         self.psi = psi
@@ -101,7 +104,7 @@ class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         return xp.average(xp.array(all_results), axis=0)
 
 
-class DEMassEstimator(MassEstimator):
+class DEMassEstimator(IncrementalMassEstimator):
     def __init__(
         self,
         psi,

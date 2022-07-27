@@ -8,7 +8,7 @@ from Metric import fmeasure
 from Clustering import DensityPeak
 from IsolationEstimators import (
     DEMassEstimator,
-    MassEstimator,
+    IncrementalMassEstimator,
     DataIndependentDensityEstimator,
     DataIndependentEstimator,
 )
@@ -27,7 +27,7 @@ def cluster_demass(psi, parallel=None, t=200):
 
 
 def cluster_mass(psi, parallel=None, t=200):
-    e = MassEstimator(psi, t, parallel=parallel, n_jobs=64)
+    e = IncrementalMassEstimator(psi, t, parallel=parallel, n_jobs=64)
     dp = DensityPeak(-1, e)
     dp.accept_k = True
     dp.label = "Adaptive Mass (psi={}, partitinoing=IForest)".format(psi)
