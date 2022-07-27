@@ -19,12 +19,10 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         n_jobs=16,
         verbose=0,
         parallel=None,
-        metric="minkowski",
-        p=2,
         **kwargs
     ):
         if partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi, metric, p, **kwargs)
+            base_transformer = VoronoiPartitioning(psi, **kwargs)
         elif partitioning_type == IFOREST:
             base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == FUZZI:
@@ -89,7 +87,7 @@ class IncrementalMassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     ):
         if partitioning_type == IFOREST:
             base_transformer = IncrementalMassEstimationTree(psi, rotation)
-        else: # aNNE has no incremental implementation
+        else:  # aNNE has no incremental implementation
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
         self.psi = psi

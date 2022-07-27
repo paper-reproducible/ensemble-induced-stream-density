@@ -14,7 +14,7 @@ def _inn(X, c, r):
 
 
 class INNPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, anomaly_detection=False):
+    def __init__(self, psi, anomaly_detection=False, **kwargs):
         super().__init__(psi)
         self.anomaly_detection = anomaly_detection
         self.region_scale_ = None
@@ -63,7 +63,7 @@ class INNPartitioning(ReservoirSamplingEstimator, TransformerMixin):
             xp.full([X.shape[0]], np.nan, dtype=np.float32),
             x_covered,
             xpUtils.cast(cnn_x, dtype=np.float32),
-        ) # int array cannot have nan
+        )  # int array cannot have nan
         return xp.expand_dims(indices, axis=1)
 
     def score_samples(self, X):
@@ -76,4 +76,46 @@ class INNPartitioning(ReservoirSamplingEstimator, TransformerMixin):
         isolation_scores = xpUtils.tensor_scatter_nd_update(
             xp.ones([X.shape[0]], dtype=ratio.dtype), x_covered, ratio[cnn_x]
         )
-        return isolation_scores
+        return -isolation_scores
+
+
+if __name__ == "__main__":
+
+    # import os
+
+    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "5"
+    # import tensorflow as tf
+
+    # tnp = tf.experimental.numpy
+    # tnp.experimental_enable_numpy_behavior()
+    # xp = tnp
+    xp = np
+
+    X = xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]])
+
+    from joblib import Parallel
+    from IsolationEstimators import IsolationBasedAnomalyDetector
+
+    np.set_printoptions(precision=2)
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
+        e = IsolationBasedAnomalyDetector(
+            2,
+            1000,
+            contamination=0.2,
+            mass_based=False,
+            partitioning_type="inne",
+            parallel=parallel,
+        )
+        result = e.fit_predict(X)
+        print("By ratio: ", result.numpy() if hasattr(result, "numpy") else result)
+
+        e = IsolationBasedAnomalyDetector(
+            2,
+            1000,
+            contamination=0.2,
+            mass_based=True,
+            partitioning_type="inne",
+            parallel=parallel,
+        )
+        result = e.fit_predict(X)
+        print("By mass: ", result.numpy() if hasattr(result, "numpy") else result)

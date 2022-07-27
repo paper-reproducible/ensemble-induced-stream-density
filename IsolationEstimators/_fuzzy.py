@@ -18,7 +18,7 @@ def _batch_gaussian(X, locs, scales):
 
 
 class FuzziPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, kernel=_gaussian, random_scale=False):
+    def __init__(self, psi, kernel=_gaussian, random_scale=False, **kwargs):
         super().__init__(psi)
         if kernel not in _kernels:
             raise NotImplementedError("This kernel is not supported.")
