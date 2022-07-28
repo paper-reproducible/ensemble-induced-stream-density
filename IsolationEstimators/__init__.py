@@ -11,6 +11,9 @@ from ._data_independent import (
 from ._outlier_mass import (
     IsolationBasedAnomalyDetector,
 )
+from ._outlier_iforest import (
+    IsolationForestAnomalyDetector,
+)
 
 __all__ = [
     "IsolationTransformer",
@@ -20,4 +23,5 @@ __all__ = [
     "DataIndependentDensityEstimator",
     "MassEstimator",
     "IsolationBasedAnomalyDetector",
+    "IsolationForestAnomalyDetector",
 ]

@@ -14,10 +14,25 @@ if __name__ == "__main__":
     X = xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]])
 
     from joblib import Parallel
-    from IsolationEstimators import IsolationBasedAnomalyDetector
+    from IsolationEstimators import (
+        IsolationBasedAnomalyDetector,
+        IsolationForestAnomalyDetector,
+    )
 
     np.set_printoptions(precision=2)
     with Parallel(n_jobs=32, prefer="threads") as parallel:
+
+        e = IsolationBasedAnomalyDetector(
+            2,
+            1000,
+            contamination=0.2,
+            mass_based=True,
+            partitioning_type="fuzzi",
+            parallel=parallel,
+        )
+        result = e.fit_predict(X)
+        print("FuzzI by mass: ", result.numpy() if hasattr(result, "numpy") else result)
+
         e = IsolationBasedAnomalyDetector(
             2,
             1000,
@@ -55,26 +70,41 @@ if __name__ == "__main__":
 
         X_ = ball_scale(X)
 
-        e = IsolationBasedAnomalyDetector(
+        # e = IsolationBasedAnomalyDetector(
+        #     2,
+        #     1000,
+        #     contamination=0.2,
+        #     mass_based=True,
+        #     partitioning_type="iforest",
+        #     parallel=parallel,
+        # )
+        # result = e.fit_predict(X_)
+        # print(
+        #     "iForest by mass: ", result.numpy() if hasattr(result, "numpy") else result
+        # )
+
+        e = IsolationForestAnomalyDetector(
             2,
             1000,
             contamination=0.2,
             mass_based=True,
-            partitioning_type="iforest",
             parallel=parallel,
         )
         result = e.fit_predict(X_)
         print(
-            "iForest by mass: ", result.numpy() if hasattr(result, "numpy") else result
+            "iForest by mass: ",
+            result.numpy() if hasattr(result, "numpy") else result,
         )
 
-        e = IsolationBasedAnomalyDetector(
+        e = IsolationForestAnomalyDetector(
             2,
             1000,
             contamination=0.2,
-            mass_based=True,
-            partitioning_type="fuzzi",
+            mass_based=False,
             parallel=parallel,
         )
-        result = e.fit_predict(X)
-        print("FuzzI by mass: ", result.numpy() if hasattr(result, "numpy") else result)
+        result = e.fit_predict(X_)
+        print(
+            "iForest by path: ",
+            result.numpy() if hasattr(result, "numpy") else result,
+        )

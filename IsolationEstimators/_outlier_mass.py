@@ -1,8 +1,7 @@
-from sklearn.base import DensityMixin
 from joblib import delayed
+from Common import get_array_module
 from ._outlier_base import BaseAnomalyDetector
 from ._data_dependent import MassEstimator
-from Common import get_array_module
 from ._constants import INNE
 
 
