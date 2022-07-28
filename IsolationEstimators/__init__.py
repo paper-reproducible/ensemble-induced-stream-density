@@ -2,13 +2,13 @@ from ._data_dependent import (
     IsolationTransformer,
     IncrementalMassEstimator,
     DEMassEstimator,
+    MassEstimator,
 )
 from ._data_independent import (
     DataIndependentEstimator,
     DataIndependentDensityEstimator,
 )
-from ._data_dependent_static import (
-    MassEstimator,
+from ._outlier_mass import (
     IsolationBasedAnomalyDetector,
 )
 

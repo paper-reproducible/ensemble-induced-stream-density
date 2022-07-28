@@ -117,3 +117,10 @@ class DEMassEstimator(IncrementalMassEstimator):
 
     def score(self, X):
         return super().score(X, return_demass=True)
+
+
+class MassEstimator(IsolationTransformer, DensityMixin):
+    def score(self, X, y=None):
+        xp, _ = get_array_module(X)
+        m_sim = self.transform(X, return_similarity=True)
+        return xp.sum(m_sim, axis=1)

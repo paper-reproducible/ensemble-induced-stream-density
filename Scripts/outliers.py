@@ -3,10 +3,9 @@ import numpy as np
 if __name__ == "__main__":
 
     # import os
-
-    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "5"
     # import tensorflow as tf
 
+    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "5"
     # tnp = tf.experimental.numpy
     # tnp.experimental_enable_numpy_behavior()
     # xp = tnp
