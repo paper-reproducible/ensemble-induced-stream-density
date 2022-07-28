@@ -33,11 +33,18 @@ def _get_array_module_name(X):
     return _NP
 
 
-def _pdist(X, Y, p=2, root=True, xp=numpy):
-    result = xp.sum(
-        (xp.expand_dims(X, axis=1) - xp.expand_dims(Y, axis=0)) ** p,
-        axis=2,
-    )
+def _pdist(X, Y, p=2, root=True, xp=numpy, xpUtils=None):
+    if xpUtils is None or not hasattr(xpUtils, "norm"):
+        result = xp.sum(
+            (xp.expand_dims(X, axis=1) - xp.expand_dims(Y, axis=0)) ** p,
+            axis=2,
+        )
+    else:
+        result = xpUtils.norm(
+            xp.expand_dims(X, axis=1) - xp.expand_dims(Y, axis=0),
+            ord=p,
+            axis=2,
+        )
     if root:
         result = result ** (1 / p)
     return result

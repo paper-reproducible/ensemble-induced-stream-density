@@ -35,6 +35,7 @@ def _setup_xp(xpUtils, xp):
         "gather_nd",
         lambda X, indices: X[tuple([indices[:, i] for i in range(indices.shape[1])])],
     )
+    setattr(xpUtils, "percentile", xp.percentile)
     return xp
 
 

@@ -3,7 +3,7 @@ from Common import ReservoirSamplingEstimator, get_array_module
 
 
 class VoronoiPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, metric="minkowski", p=2):
+    def __init__(self, psi, metric="minkowski", p=2, **kwargs):
         super().__init__(psi)
         self.metric = metric
         self.p = p

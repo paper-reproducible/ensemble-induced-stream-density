@@ -3,6 +3,7 @@
 
 def setup_tf(xpUtils):
     import tensorflow as tf
+    import tensorflow_probability.python as tfp
     from scipy import sparse
 
     xp = tf.experimental.numpy
@@ -42,6 +43,9 @@ def setup_tf(xpUtils):
         if len(indices.shape) == 1:
             indices = xp.expand_dims(indices, axis=1)
 
+        if len(updates) == 1 and len(indices) > 1:
+            updates = tf.tile(updates, [len(indices)])
+
         return tf.tensor_scatter_nd_update(X, indices, updates)
 
     setattr(xpUtils, "coo_matrix", _coo_matrix)
@@ -55,4 +59,5 @@ def setup_tf(xpUtils):
     setattr(xpUtils, "numpy_dtype", lambda X: X.dtype.as_numpy_dtype)
     setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
     setattr(xpUtils, "gather_nd", tf.gather_nd)
+    setattr(xpUtils, "percentile", tfp.stats.percentile)
     return xp
