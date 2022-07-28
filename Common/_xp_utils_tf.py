@@ -7,8 +7,26 @@ def setup_tf(xpUtils):
 
     xp = tf.experimental.numpy
 
-    def _coo_matrix(X: tf.Tensor, shape=None, dtype=None, copy=False):
-        return
+    def _coo_matrix(arg1, shape=None, dtype=None, copy=False):
+        if isinstance(arg1, tuple):
+            try:
+                obj, (row, col) = arg1
+                return sparse.coo_matrix(
+                    (obj.numpy(), (row.numpy(), col.numpy())),
+                    shape=shape,
+                    dtype=dtype,
+                    copy=copy,
+                )
+            except:
+                pass
+        if "numpy" in dir(arg1):
+            try:
+                arg1 = arg1.numpy()
+                return sparse.coo_matrix(arg1, shape=shape, dtype=dtype, copy=copy)
+            except:
+                pass
+
+        raise NotImplementedError()
 
     def _hstack(blocks, format=None, dtype=None):
         return sparse.hstack(blocks, format, dtype)

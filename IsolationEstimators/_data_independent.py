@@ -4,8 +4,9 @@ from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._isolation_tree import IsolationTree
 from ._voronoi import VoronoiPartitioning
+from ._fuzzy import FuzziPartitioning
 from Common import get_array_module, ball_samples
-from ._constants import ANNE, IFOREST
+from ._constants import ANNE, IFOREST, FUZZI
 
 
 def _single_fit(transformer, X):
@@ -15,8 +16,8 @@ def _single_fit(transformer, X):
     transformer.fit(samples)
     indices = transformer.transform(X)
     transformer.region_mass_ = xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
-        axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=0)),
+        axis=0,
     )
     return transformer
 
@@ -25,8 +26,8 @@ def _single_partial_fit(transformer, X):
     xp, _ = get_array_module(X)
     indices = transformer.transform(X)
     transformer.region_mass_ = transformer.region_mass_ + xp.sum(
-        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=1)),
-        axis=1,
+        xp.equal(indices, xp.expand_dims(xp.arange(transformer.psi), axis=0)),
+        axis=0,
     )
     return transformer
 
@@ -44,19 +45,28 @@ def _single_score(partitioning_type, transformer, X, return_demass):
         region_demass = (
             xpUtils.cast(region_mass, dtype=np.dtype(float)) / region_volumes
         )
-        return xp.take(region_demass, xp.squeeze(indices, axis=0))
+        return xp.take(region_demass, xp.squeeze(indices, axis=1))
     else:
-        return xp.take(region_mass, xp.squeeze(indices, axis=0))
+        return xp.take(region_mass, xp.squeeze(indices, axis=1))
 
 
 class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     def __init__(
-        self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0, parallel=None
+        self,
+        psi,
+        t,
+        partitioning_type=IFOREST,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
+        **kwargs
     ):
         if partitioning_type == IFOREST:
-            base_transformer = IsolationTree(psi)
+            base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi)
+            base_transformer = VoronoiPartitioning(psi, **kwargs)
+        elif partitioning_type == FUZZI:
+            base_transformer = FuzziPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
