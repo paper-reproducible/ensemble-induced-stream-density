@@ -106,6 +106,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
 if __name__ == "__main__":
     # import tensorflow as tf
 
+    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "5"
     # tnp = tf.experimental.numpy
     # tnp.experimental_enable_numpy_behavior()
 
