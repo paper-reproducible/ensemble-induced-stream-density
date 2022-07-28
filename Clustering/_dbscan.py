@@ -27,7 +27,7 @@ def dbscan(m_dis, eps, minPts):
 from sklearn.base import BaseEstimator, ClusterMixin
 from IsolationEstimators import IsolationTransformer
 
-_ISOLATION = ["anne", "iforest", "fuzzi"]
+_ISOLATION = ["anne", "iforest", "fuzzi", "inne"]
 
 
 class DBSCAN(BaseEstimator, ClusterMixin):
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # xp = tnp
     xp = np
 
-    X = xp.expand_dims([2, 3, 8, 9, 100], axis=1)
+    X = xp.expand_dims(xp.array([2, 3, 8, 9, 100], dtype=np.float64), axis=1)
     m = DBSCAN(eps=1.5, minPts=2)
     labels = m.fit_predict(X)
     print("l2:", labels)
@@ -123,6 +123,11 @@ if __name__ == "__main__":
 
     # with Parallel(n_jobs=32, prefer="processes") as parallel:
     with Parallel(n_jobs=32, prefer="threads") as parallel:
+
+        m = DBSCAN(eps=0.2, minPts=2, metric="inne", psi=2, t=200, parallel=parallel)
+        labels = m.fit_predict(X)
+        print("inne:", labels)
+
         m = DBSCAN(
             eps=0.99,
             minPts=2,

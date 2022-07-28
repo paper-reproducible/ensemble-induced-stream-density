@@ -5,8 +5,9 @@ from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
 from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
 from ._fuzzy import FuzziPartitioning
+from ._inn import INNPartitioning
 from Common import get_array_module
-from ._constants import ANNE, IFOREST, FUZZI
+from ._constants import ANNE, IFOREST, FUZZI, INNE
 
 
 class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
@@ -18,16 +19,16 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         n_jobs=16,
         verbose=0,
         parallel=None,
-        metric="minkowski",
-        p=2,
         **kwargs
     ):
         if partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi, metric, p, **kwargs)
+            base_transformer = VoronoiPartitioning(psi, **kwargs)
         elif partitioning_type == IFOREST:
             base_transformer = IsolationTree(psi, **kwargs)
         elif partitioning_type == FUZZI:
             base_transformer = FuzziPartitioning(psi, **kwargs)
+        elif partitioning_type == INNE:
+            base_transformer = INNPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
@@ -73,7 +74,7 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             return xpUtils.hstack(all_results)
 
 
-class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
+class IncrementalMassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     def __init__(
         self,
         psi,
@@ -86,7 +87,7 @@ class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
     ):
         if partitioning_type == IFOREST:
             base_transformer = IncrementalMassEstimationTree(psi, rotation)
-        else:
+        else:  # aNNE has no incremental implementation
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)
         self.psi = psi
@@ -101,7 +102,7 @@ class MassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         return xp.average(xp.array(all_results), axis=0)
 
 
-class DEMassEstimator(MassEstimator):
+class DEMassEstimator(IncrementalMassEstimator):
     def __init__(
         self,
         psi,
@@ -116,3 +117,10 @@ class DEMassEstimator(MassEstimator):
 
     def score(self, X):
         return super().score(X, return_demass=True)
+
+
+class MassEstimator(IsolationTransformer, DensityMixin):
+    def score(self, X, y=None):
+        xp, _ = get_array_module(X)
+        m_sim = self.transform(X, return_similarity=True)
+        return xp.sum(m_sim, axis=1)

@@ -20,7 +20,7 @@ def get_boundaries(X, ball_scaled=True):
 class IsolationTree(
     ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin
 ):
-    def __init__(self, psi):
+    def __init__(self, psi, **kwargs):
         super().__init__(psi)
 
     def fit(self, X, y=None, ball_scaled=True):
