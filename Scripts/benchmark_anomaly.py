@@ -10,11 +10,11 @@ from IsolationEstimators import (
 )
 
 estimator_names = [
-    "fuzzi_mass",
+    "inne_ratio",
     "inne_mass",
+    "fuzzi_mass",
     "anne_mass",
     "iforest_mass",
-    "inne_ratio",
     "iforest_path",
 ]
 
@@ -72,7 +72,9 @@ def estimator(name, psi, t=1000, parallel=None):
 def predict_once(e, X, contamination="auto"):
     e = e()
     e.contamination = contamination
-    return e.fit_predict(X)
+    results = e.fit_predict(X)
+    print("#", end="")
+    return results
 
 
 def predict_rounds(e, X, y, contamination="auto", n_rounds=10):
@@ -145,6 +147,7 @@ def test(dataset_name, t=1000, xp=np, parallel=None):
     test_results = test_params(
         X, y, psi_values, t=t, contamination=contamination, parallel=parallel
     )
+    print("\n")
     save_results(test_results, X.shape[0], "./Data/anomaly_test_" + dataset_name)
     return
 
@@ -162,7 +165,7 @@ def main(t=1000, use_tensorflow=False):
     else:
         xp = np
 
-    with Parallel(n_jobs=1, prefer="threads") as parallel:
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
         for dataset_name in dataset_configs:
             test(dataset_name, t=t, xp=xp, parallel=parallel)
 
