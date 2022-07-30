@@ -24,7 +24,7 @@ def fmeasure(y_true, y_pred):
                 matrix[y_true[i, 0] - 1, y_pred[i, 0] - 1] + 1
             )
         else:
-            noise[y_true[i] - 1] = noise[y_true[i] - 1] + 1
+            noise[y_true[i, 0], 0] = noise[y_true[i, 0], 0] + 1
 
     indF = np.zeros([np.max(y_true), 1])
     if matrix.shape[1] != 0:

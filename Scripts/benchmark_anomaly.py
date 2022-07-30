@@ -1,22 +1,15 @@
 import os
 import numpy as np
 import pandas as pd
+from time import time
 from joblib import Parallel
 from sklearn.base import clone
 from Common import get_array_module, ball_scale
+from Metric import fmeasure
 from IsolationEstimators import (
     IsolationBasedAnomalyDetector,
     IsolationForestAnomalyDetector,
 )
-
-estimator_names = [
-    "inne_ratio",
-    "inne_mass",
-    "fuzzi_mass",
-    "anne_mass",
-    "iforest_mass",
-    "iforest_path",
-]
 
 
 def estimator(name, psi, t=1000, parallel=None):
@@ -77,44 +70,53 @@ def predict_once(e, X, contamination="auto"):
     return results
 
 
-def predict_rounds(e, X, y, contamination="auto", n_rounds=10):
+def predict_rounds(e, X, y_true, contamination="auto", n_rounds=10):
     _, xpUtils = get_array_module(X)
-
     results = []  # [n_rounds, 1+n]
+    metric_results = []
     for round in range(n_rounds):
+        seconds = time()
         y_pred = predict_once(e, X, contamination)
+        seconds = time() - seconds
+        y_pred = xpUtils.cast(y_pred, y_true.dtype)
+        f1, recall, precision = fmeasure(y_true, y_pred)
         y_pred = xpUtils.to_numpy(y_pred).tolist()
         results.append([round] + y_pred)  # [1, 1+n]
-
-    return results
+        metric_results.append([f1, recall, precision, seconds])
+    metric_results = np.average(metric_results, axis=0).tolist()
+    return results, metric_results
 
 
 def test_params(
-    X, y, psi_values=[], t=1000, contamination="auto", n_rounds=10, parallel=None
+    X, y_true, psi_values=[], t=1000, contamination="auto", n_rounds=10, parallel=None
 ):
     test_results = []  # [n_names*n_psis*n_rounds, 3+n]
+    test_results_metric = []
     X_ = ball_scale(X)
     for estimator_name in estimator_names:
         for psi in psi_values:
             e = estimator(estimator_name, psi, t, parallel)
-            results = predict_rounds(
+            results, metric_results = predict_rounds(
                 e,
                 X_ if estimator_name.startswith("iforest") else X,
-                y,
+                y_true,
                 contamination,
                 n_rounds,
             )
             for i in range(len(results)):
                 results[i] = [estimator_name, psi] + results[i]
+            metric_results = [estimator_name, psi] + metric_results
             test_results += results
-    return test_results
+            test_results_metric += [metric_results]
+    return test_results, test_results_metric
 
 
 def save_parquet(df, file_name):
-    if file_name.endswith("demo"):
-        print(df)  # test
     ext = ".parquet.gzip"
     file_name = file_name if file_name.endswith(ext) else file_name + ext
+    if _debug:
+        print("Saving " + file_name + ": ")
+        print(df)
     df.to_parquet(file_name, compression="gzip")
     return
 
@@ -128,31 +130,29 @@ def save_results(test_results, n_records, file_name):
     return
 
 
-dataset_configs = {
-    "demo": {
-        "X": lambda xp: xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
-        "y": lambda xp: xp.array([1, 1, 1, 1, -1]),
-        "contamination": 0.2,
-        "psi_values": [2],
-    },
-}
+def save_metric(test_results_metric, file_name):
+    df = pd.DataFrame(test_results_metric)
+    df.columns = ["detector", "psi", "f1", "recall", "precision", "seconds"]
+    save_parquet(df, file_name)
+    return
 
 
-def test(dataset_name, t=1000, xp=np, parallel=None):
+def test(dataset_name, folder="./Data", t=1000, xp=np, parallel=None):
     config = dataset_configs[dataset_name]
     X = config["X"](xp)
     y = config["y"](xp)
     contamination = config["contamination"]
     psi_values = config["psi_values"]
-    test_results = test_params(
+    test_results, test_results_metric = test_params(
         X, y, psi_values, t=t, contamination=contamination, parallel=parallel
     )
     print("\n")
-    save_results(test_results, X.shape[0], "./Data/anomaly_test_" + dataset_name)
+    save_results(test_results, X.shape[0], folder + "/anomaly_pred_" + dataset_name)
+    save_metric(test_results_metric, folder + "/anomaly_metric_" + dataset_name)
     return
 
 
-def main(t=1000, use_tensorflow=False):
+def main(t=1000, folder="./Data", use_tensorflow=False):
     np.set_printoptions(precision=2)
 
     if use_tensorflow:
@@ -167,10 +167,30 @@ def main(t=1000, use_tensorflow=False):
 
     with Parallel(n_jobs=32, prefer="threads") as parallel:
         for dataset_name in dataset_configs:
-            test(dataset_name, t=t, xp=xp, parallel=parallel)
-
+            test(dataset_name, folder, t=t, xp=xp, parallel=parallel)
     return
 
 
+estimator_names = [
+    "inne_ratio",
+    "inne_mass",
+    "fuzzi_mass",
+    "anne_mass",
+    "iforest_mass",
+    "iforest_path",
+]
+
+dataset_configs = {
+    "demo": {
+        "X": lambda xp: xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
+        "y": lambda xp: xp.array([1, 1, 1, 1, -1]),
+        "contamination": 0.2,
+        "psi_values": [2],
+    },
+}
+
+_debug = True
+_use_tensorflow = False
+
 if __name__ == "__main__":
-    main(use_tensorflow=False)
+    main(use_tensorflow=_use_tensorflow)
