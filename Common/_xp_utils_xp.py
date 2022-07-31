@@ -4,11 +4,18 @@ import numpy
 
 def _unique(X, xp=numpy):
     if len(X.shape) == 2:
-        X_ = xp.ascontiguousarray(X).view(
-            xp.dtype((xp.void, X.dtype.itemsize * X.shape[1]))
-        )
-        _, idx = xp.unique(X_, return_index=True)
-        X_ = X[idx]
+        if xp == numpy:
+            X_ = xp.ascontiguousarray(X).view(
+                xp.dtype((xp.void, X.dtype.itemsize * X.shape[1]))
+            )
+            _, idx = xp.unique(X_, return_index=True)
+            X_ = X[idx]
+        else:
+            sortarr     = X[xp.lexsort(X.T[::-1])]
+            mask        = xp.empty(X.shape[0], dtype=xp.bool_)
+            mask[0]     = True
+            mask[1:]    = xp.any(sortarr[1:] != sortarr[:-1], axis=1)
+            X_ = sortarr[mask]
     elif len(X.shape) == 1:
         X_ = xp.unique(X)
     return X_

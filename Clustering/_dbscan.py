@@ -16,6 +16,7 @@ def dbscan(m_dis, eps, minPts):
     m_adj_core = m_adj[l_core, :][:, l_core]
 
     n_components, labels_core = connected_components(xpUtils.to_numpy(m_adj_core))
+    labels_core = xp.array(labels_core)
 
     l_assign_core = xp.argmin(m_dis[:, l_core], axis=1)
     labels = xp.take(labels_core, l_assign_core)

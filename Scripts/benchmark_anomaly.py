@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from time import time
 from joblib import Parallel
-from sklearn.base import clone
 from Common import get_array_module, ball_scale
 from Metric import fmeasure
 from IsolationEstimators import (
@@ -119,6 +118,12 @@ def save_parquet(df, file_name):
         print(df)
     df.to_parquet(file_name, compression="gzip")
     return
+    
+
+def save_csv(df, file_name):
+    ext = ".csv"
+    file_name = file_name if file_name.endswith(ext) else file_name + ext
+    df.to_csv(file_name)
 
 
 def save_results(test_results, n_records, file_name):
@@ -132,8 +137,8 @@ def save_results(test_results, n_records, file_name):
 
 def save_metric(test_results_metric, file_name):
     df = pd.DataFrame(test_results_metric)
-    df.columns = ["detector", "psi", "f1", "recall", "precision", "seconds"]
-    save_parquet(df, file_name)
+    df.columns = ["dataset", "detector", "psi", "f1", "recall", "precision", "seconds"]
+    save_csv(df, file_name)
     return
 
 
@@ -148,11 +153,12 @@ def test(dataset_name, folder="./Data", t=1000, xp=np, parallel=None):
     )
     print("\n")
     save_results(test_results, X.shape[0], folder + "/anomaly_pred_" + dataset_name)
-    save_metric(test_results_metric, folder + "/anomaly_metric_" + dataset_name)
-    return
+    for i in range(len(test_results_metric)):
+        test_results_metric[i] = [dataset_name]+test_results_metric[i]
+    return test_results_metric
 
 
-def main(t=1000, folder="./Data", use_tensorflow=False):
+def main(t=1000, folder="./Data", use_tensorflow=False, use_cupy=False):
     np.set_printoptions(precision=2)
 
     if use_tensorflow:
@@ -162,12 +168,17 @@ def main(t=1000, folder="./Data", use_tensorflow=False):
         tnp = tf.experimental.numpy
         tnp.experimental_enable_numpy_behavior()
         xp = tnp
+    elif use_cupy:
+        import cupy as cp
+        xp = cp
     else:
         xp = np
 
+    test_results_metric = []
     with Parallel(n_jobs=32, prefer="threads") as parallel:
         for dataset_name in dataset_configs:
-            test(dataset_name, folder, t=t, xp=xp, parallel=parallel)
+            test_results_metric += test(dataset_name, folder, t=t, xp=xp, parallel=parallel)
+    save_metric(test_results_metric, folder + "/anomaly_metric")
     return
 
 
@@ -176,8 +187,8 @@ estimator_names = [
     "inne_mass",
     "fuzzi_mass",
     "anne_mass",
-    "iforest_mass",
-    "iforest_path",
+    # "iforest_mass",
+    # "iforest_path",
 ]
 
 dataset_configs = {
@@ -191,6 +202,10 @@ dataset_configs = {
 
 _debug = True
 _use_tensorflow = False
+_use_cupy = False
 
 if __name__ == "__main__":
-    main(use_tensorflow=_use_tensorflow)
+    main(
+        use_tensorflow=_use_tensorflow,
+        use_cupy=_use_cupy,
+    )
