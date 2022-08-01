@@ -276,6 +276,14 @@ estimator_names = [
 ]
 
 dataset_configs = {
+    "demo": {
+        "data": lambda xp: (
+            xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
+            xp.array([1, 1, 1, 1, -1]),
+        ),
+        "contamination": 0.2,
+        "psi_values": [2],
+    },
     "http": {
         "data": lambda xp: load_data("http", xp),
         "contamination": 2209.0 / (2209.0 + 56516.0),
@@ -316,19 +324,11 @@ dataset_configs = {
         "contamination": 53.0 / (53.0 + 2073.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
-    "demo": {
-        "data": lambda xp: (
-            xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
-            xp.array([1, 1, 1, 1, -1]),
-        ),
-        "contamination": 0.2,
-        "psi_values": [2],
-    },
 }
 
 if __name__ == "__main__":
     main(
         use_tensorflow=False,
-        use_cupy=True,
+        use_cupy=False,
         debug=True,
     )

@@ -1,6 +1,13 @@
 import numpy
 from sklearn.base import TransformerMixin, DensityMixin
-from Common import ReservoirSamplingEstimator, get_array_module, rotate
+from Common import (
+    ReservoirSamplingEstimator,
+    get_array_module,
+    rotate,
+    is_check_and_warn_enabled,
+    check_and_warn,
+    checked_and_warn,
+)
 from ._binary_tree import AxisParallelBinaryTree
 
 
@@ -51,10 +58,12 @@ class IsolationTree(
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
         split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
 
-        if numpy.any(lower_boundary == split_value) or numpy.any(
-            upper_boundary == split_value
-        ):
-            print("wth")
+        if is_check_and_warn_enabled():
+            check_and_warn(
+                numpy.any(lower_boundary == split_value)
+                or numpy.any(upper_boundary == split_value),
+                "[DEBUG] _isolation_split is resulting a compressed region",
+            )
 
         return False, split_dim, split_value, l_in
 
@@ -126,7 +135,9 @@ class IsolationTree(
         l_leaf = xp.where(self.node_is_leaf_)[0]
         search_result = self.search(drop_sample, l_nodes=self.node_is_leaf_)
         if not xp.any(search_result):
-            print("WTH")
+            checked_and_warn(
+                "[DEBUG] _prune is failing because the region of given sample is not found"
+            )
         i_node_drop = l_leaf[search_result[0, :]][0]
         self.samples_ = xp.take(
             self.samples_,
