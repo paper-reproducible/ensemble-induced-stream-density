@@ -3,28 +3,28 @@ import h5py
 import numpy as np
 
 
-def load_mat(folder, dataset_name, xp=np):
-    file_name = folder + "/" + dataset_name + ".mat"
-    f = h5py.File(file_name, "r")
-    X = xp.array(f.get("X"))
-    y = xp.array(f.get("y"))
-    if len(y.shape) == 2:
-        if y.shape[1] == 1:
-            y = xp.squeeze(y, axis=1)
-        elif y.shape[0] == 1:
-            y = xp.squeeze(y, axis=0)
-    if X.shape[1] == y.shape[0]:
-        X = xp.transpose(X)
-    labels = xp.sort(xp.unique(y))
-    if labels.shape[0] == 2 and labels[0] == 0 and labels[1] == 1:
-        y = xp.where(y == 1, -1, y)
-        y = xp.where(y == 0, 1, y)
-    elif xp.min(labels) < 0:
-        y = xp.where(y >= 0, 1, y)
-        y = xp.where(y < 0, -1, y)
-    else:
-        raise Exception("Unsupported label format")
-    return X, y
+# def load_mat(folder, dataset_name, xp=np, ):
+#     file_name = folder + "/" + dataset_name + ".mat"
+#     f = h5py.File(file_name, "r")
+#     X = xp.array(f.get("X"))
+#     y = xp.array(f.get("y"))
+#     if len(y.shape) == 2:
+#         if y.shape[1] == 1:
+#             y = xp.squeeze(y, axis=1)
+#         elif y.shape[0] == 1:
+#             y = xp.squeeze(y, axis=0)
+#     if X.shape[1] == y.shape[0]:
+#         X = xp.transpose(X)
+#     labels = xp.sort(xp.unique(y))
+#     if labels.shape[0] == 2 and labels[0] == 0 and labels[1] == 1:
+#         y = xp.where(y == 1, -1, y)
+#         y = xp.where(y == 0, 1, y)
+#     elif xp.min(labels) < 0:
+#         y = xp.where(y >= 0, 1, y)
+#         y = xp.where(y < 0, -1, y)
+#     else:
+#         raise Exception("Unsupported label format")
+#     return X, y
 
 
 def save_parquet(df, file_name):

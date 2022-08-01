@@ -6,7 +6,7 @@ from sklearn.metrics import precision_recall_fscore_support
 from Common import (
     get_array_module,
     ball_scale,
-    load_mat,
+    # load_mat,
     save_csv,
     save_parquet,
     init_xp,
@@ -184,6 +184,88 @@ def main(t=1000, folder="./Data", use_tensorflow=False, use_cupy=False, debug=Fa
     return
 
 
+# https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_outlier_detection_bench.html
+def preprocess_dataset(dataset_name):
+    from sklearn.datasets import fetch_kddcup99, fetch_covtype, fetch_openml
+    from sklearn.preprocessing import LabelBinarizer
+
+    rng = np.random.RandomState(42)
+
+    # loading and vectorization
+    # print(f"Loading {dataset_name} data")
+    if dataset_name in ["http", "smtp", "SA", "SF"]:
+        dataset = fetch_kddcup99(subset=dataset_name, percent10=True, random_state=rng)
+        X = dataset.data
+        y = dataset.target
+        lb = LabelBinarizer()
+
+        if dataset_name == "SF":
+            idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
+            X = X[idx]  # reduce the sample size
+            y = y[idx]
+            x1 = lb.fit_transform(X[:, 1].astype(str))
+            X = np.c_[X[:, :1], x1, X[:, 2:]]
+        elif dataset_name == "SA":
+            idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
+            X = X[idx]  # reduce the sample size
+            y = y[idx]
+            x1 = lb.fit_transform(X[:, 1].astype(str))
+            x2 = lb.fit_transform(X[:, 2].astype(str))
+            x3 = lb.fit_transform(X[:, 3].astype(str))
+            X = np.c_[X[:, :1], x1, x2, x3, X[:, 4:]]
+        y = (y != b"normal.").astype(int)
+    if dataset_name == "forestcover":
+        dataset = fetch_covtype()
+        X = dataset.data
+        y = dataset.target
+        idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
+        X = X[idx]  # reduce the sample size
+        y = y[idx]
+
+        # inliers are those with attribute 2
+        # outliers are those with attribute 4
+        s = (y == 2) + (y == 4)
+        X = X[s, :]
+        y = y[s]
+        y = (y != 2).astype(int)
+    if dataset_name in ["glass", "wdbc", "cardiotocography"]:
+        dataset = fetch_openml(name=dataset_name, version=1, as_frame=False)
+        X = dataset.data
+        y = dataset.target
+
+        if dataset_name == "glass":
+            s = y == "tableware"
+            y = s.astype(int)
+        if dataset_name == "wdbc":
+            s = y == "2"
+            y = s.astype(int)
+            X_mal, y_mal = X[s], y[s]
+            X_ben, y_ben = X[~s], y[~s]
+
+            # downsampled to 39 points (9.8% outliers)
+            idx = rng.choice(y_mal.shape[0], 39, replace=False)
+            X_mal2 = X_mal[idx]
+            y_mal2 = y_mal[idx]
+            X = np.concatenate((X_ben, X_mal2), axis=0)
+            y = np.concatenate((y_ben, y_mal2), axis=0)
+        if dataset_name == "cardiotocography":
+            s = y == "3"
+            y = s.astype(int)
+    # 0 represents inliers, and 1 represents outliers
+    y = pd.Series(y, dtype="category")
+    return (X, y)
+
+
+def load_data(dataset_name, xp=np):
+    X, y = preprocess_dataset(dataset_name)
+    X = xp.array(X, dtype=float)
+    y = xp.array(y, dtype=int)
+    # For sklearn data
+    y = xp.where(y == 1, -1, y)
+    y = xp.where(y == 0, 1, y)
+    return X, y
+
+
 estimator_names = [
     "fuzzi_mass",
     "anne_mass",
@@ -194,6 +276,46 @@ estimator_names = [
 ]
 
 dataset_configs = {
+    "http": {
+        "data": lambda xp: load_data("http", xp),
+        "contamination": 2209.0 / (2209.0 + 56516.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "smtp": {
+        "data": lambda xp: load_data("smtp", xp),
+        "contamination": 3.0 / (3.0 + 9568.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "SA": {
+        "data": lambda xp: load_data("SA", xp),
+        "contamination": 344.0 / (344.0 + 9721.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "SF": {
+        "data": lambda xp: load_data("SF", xp),
+        "contamination": 320.0 / (320.0 + 7003.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "forestcover": {
+        "data": lambda xp: load_data("forestcover", xp),
+        "contamination": 259.0 / (259.0 + 28248.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "glass": {
+        "data": lambda xp: load_data("glass", xp),
+        "contamination": 9.0 / (9.0 + 205.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "wdbc": {
+        "data": lambda xp: load_data("wdbc", xp),
+        "contamination": 39.0 / (39.0 + 357.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "cardiotocography": {
+        "data": lambda xp: load_data("cardiotocography", xp),
+        "contamination": 53.0 / (53.0 + 2073.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
     "demo": {
         "data": lambda xp: (
             xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
@@ -202,16 +324,11 @@ dataset_configs = {
         "contamination": 0.2,
         "psi_values": [2],
     },
-    "http": {
-        "data": lambda xp: load_mat("./Data/outlier", "http", xp),
-        "contamination": 0.0039,
-        "psi_values": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
-    },
 }
 
 if __name__ == "__main__":
     main(
         use_tensorflow=False,
-        use_cupy=False,
+        use_cupy=True,
         debug=True,
     )

@@ -41,7 +41,7 @@ def rotate(X, SO=None):
     dims = X.shape[1]
 
     if SO is None:
-        SO = random_rot(dims, dtype=xpUtils.numpy_dtype(X))
+        SO = xp.array(random_rot(dims, dtype=xpUtils.numpy_dtype(X)))
 
     return xp.matmul(X, SO), SO
 
