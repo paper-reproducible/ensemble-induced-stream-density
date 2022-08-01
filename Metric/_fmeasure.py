@@ -19,12 +19,12 @@ def fmeasure(y_true, y_pred):
     noise = np.zeros([np.max(y_true), 1])
     n = y_pred.shape[0]
     for i in range(n):
-        if y_pred[i, 0] > 0:
+        if y_pred[i, 0] > 0 and y_true[i, 0] > 0:
             matrix[y_true[i, 0] - 1, y_pred[i, 0] - 1] = (
                 matrix[y_true[i, 0] - 1, y_pred[i, 0] - 1] + 1
             )
         else:
-            noise[y_true[i] - 1] = noise[y_true[i] - 1] + 1
+            noise[y_true[i, 0], 0] = noise[y_true[i, 0], 0] + 1
 
     indF = np.zeros([np.max(y_true), 1])
     if matrix.shape[1] != 0:
@@ -52,8 +52,8 @@ def _fix_shape(X):
 
 
 def _fix_array(y_true, y_pred):
-    y_true = _fix_shape(y_true)
-    y_pred = _fix_shape(y_pred)
+    y_true = _fix_shape(y_true).astype(np.int64)
+    y_pred = _fix_shape(y_pred).astype(np.int64)
 
     if np.any(y_true == 0):
         y_true[y_true >= 0] = y_true[y_true >= 0] + 1
