@@ -1,5 +1,7 @@
 from sklearn.base import BaseEstimator, clone
 from joblib import Parallel, delayed
+from ._isolation_tree import IsolationTree
+from Common import get_array_module
 
 
 def _single_fit(transformer, X):
@@ -28,7 +30,12 @@ class BaseBaggingEstimator(BaseEstimator):
         else:
             return self.preset_parallel
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, deduplicated=False):
+        if isinstance(self.base_transformer, IsolationTree):
+            _, xpUtils = get_array_module(X)
+            if not deduplicated:
+                X = xpUtils.unique(X)
+
         self.transformers_ = self.parallel()(
             delayed(_single_fit)(i, X) for i in self.transformers_
         )
