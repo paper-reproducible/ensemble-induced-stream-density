@@ -1,5 +1,10 @@
 import numpy as np
-from Common import get_array_module
+from Common import (
+    get_array_module,
+    is_check_and_warn_enabled,
+    check_and_warn,
+    checked_and_warn,
+)
 
 
 # def fix_upper_boundaries(self, l_upper_boundaries, global_upper_boundary):
@@ -57,10 +62,12 @@ def single_split(lower_boundary, upper_boundary, split_dim, split_value):
 
     upper_boundary_right = for_list(upper_boundary)
 
-    if np.any(lower_boundary_left == upper_boundary_left) or np.any(
-        lower_boundary_right == upper_boundary_right
-    ):
-        print("wth")
+    if is_check_and_warn_enabled():
+        check_and_warn(
+            np.any(lower_boundary_left == upper_boundary_left)
+            or np.any(lower_boundary_right == upper_boundary_right),
+            "[DEBUG] single_split is resulting a compressed region",
+        )
     return (
         lower_boundary_left,
         upper_boundary_left,
@@ -323,11 +330,12 @@ class AxisParallelBinaryTree:
                 self.node_levels[i_left] - 1,
                 self.node_levels,
             )
-        # TODO: remove the rest
         elif l_children.shape[0] == 0:
+            checked_and_warn("[DEBUG] _single_merge is malfunctioning")
             return
         else:
-            print("WTH")
+            checked_and_warn("[DEBUG] _single_merge is malfunctioning")
+            return
 
     def search(self, X, l_nodes=None):
         xp, _ = get_array_module(X)

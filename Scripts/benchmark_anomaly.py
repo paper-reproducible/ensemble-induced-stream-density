@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
+import h5py
+import scipy.io
 from time import time
 from joblib import Parallel
 from sklearn.metrics import precision_recall_fscore_support
 from Common import (
     get_array_module,
     ball_scale,
-    # load_mat,
     save_csv,
     save_parquet,
     init_xp,
@@ -256,7 +257,34 @@ def preprocess_dataset(dataset_name):
     return (X, y)
 
 
-def load_data(dataset_name, xp=np):
+def load_odds(folder, dataset_name, xp=np):
+    file_name = folder + "/" + dataset_name + ".mat"
+    try:        
+        f = h5py.File(file_name, "r")
+    except:
+        f = scipy.io.loadmat(file_name)
+    X = xp.array(f.get("X"))
+    y = xp.array(f.get("y"))
+    if len(y.shape) == 2:
+        if y.shape[1] == 1:
+            y = xp.squeeze(y, axis=1)
+        elif y.shape[0] == 1:
+            y = xp.squeeze(y, axis=0)
+    if X.shape[1] == y.shape[0]:
+        X = xp.transpose(X)
+    labels = xp.sort(xp.unique(y))
+    if labels.shape[0] == 2 and labels[0] == 0 and labels[1] == 1:
+        y = xp.where(y == 1, -1, y)
+        y = xp.where(y == 0, 1, y)
+    elif xp.min(labels) < 0:
+        y = xp.where(y >= 0, 1, y)
+        y = xp.where(y < 0, -1, y)
+    else:
+        raise Exception("Unsupported label format")
+    return X, y
+
+
+def load_sklearn(dataset_name, xp=np):
     X, y = preprocess_dataset(dataset_name)
     X = xp.array(X, dtype=float)
     y = xp.array(y, dtype=int)
@@ -276,46 +304,6 @@ estimator_names = [
 ]
 
 dataset_configs = {
-    "http": {
-        "data": lambda xp: load_data("http", xp),
-        "contamination": 2209.0 / (2209.0 + 56516.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "smtp": {
-        "data": lambda xp: load_data("smtp", xp),
-        "contamination": 3.0 / (3.0 + 9568.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "SA": {
-        "data": lambda xp: load_data("SA", xp),
-        "contamination": 344.0 / (344.0 + 9721.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "SF": {
-        "data": lambda xp: load_data("SF", xp),
-        "contamination": 320.0 / (320.0 + 7003.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "forestcover": {
-        "data": lambda xp: load_data("forestcover", xp),
-        "contamination": 259.0 / (259.0 + 28248.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "glass": {
-        "data": lambda xp: load_data("glass", xp),
-        "contamination": 9.0 / (9.0 + 205.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "wdbc": {
-        "data": lambda xp: load_data("wdbc", xp),
-        "contamination": 39.0 / (39.0 + 357.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
-    "cardiotocography": {
-        "data": lambda xp: load_data("cardiotocography", xp),
-        "contamination": 53.0 / (53.0 + 2073.0),
-        "psi_values": [2, 4, 8, 16, 32],
-    },
     "demo": {
         "data": lambda xp: (
             xp.array([[2.1], [3.1], [8.1], [9.1], [100.1]]),
@@ -323,6 +311,51 @@ dataset_configs = {
         ),
         "contamination": 0.2,
         "psi_values": [2],
+    },
+    "http": {
+        "data": lambda xp: load_sklearn("http", xp),
+        "contamination": 2209.0 / (2209.0 + 56516.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "smtp": {
+        "data": lambda xp: load_sklearn("smtp", xp),
+        "contamination": 3.0 / (3.0 + 9568.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "SA": {
+        "data": lambda xp: load_sklearn("SA", xp),
+        "contamination": 344.0 / (344.0 + 9721.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "SF": {
+        "data": lambda xp: load_sklearn("SF", xp),
+        "contamination": 320.0 / (320.0 + 7003.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "forestcover": {
+        "data": lambda xp: load_sklearn("forestcover", xp),
+        "contamination": 259.0 / (259.0 + 28248.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "glass": {
+        "data": lambda xp: load_sklearn("glass", xp),
+        "contamination": 9.0 / (9.0 + 205.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "wdbc": {
+        "data": lambda xp: load_sklearn("wdbc", xp),
+        "contamination": 39.0 / (39.0 + 357.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "cardiotocography": {
+        "data": lambda xp: load_sklearn("cardiotocography", xp),
+        "contamination": 53.0 / (53.0 + 2073.0),
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "mnist": {
+        "data": lambda xp: load_odds("./Data/odds", "mnist", xp),
+        "contamination": 700.0 / 7603.0,
+        "psi_values": [2, 4, 8, 16, 32],
     },
 }
 
