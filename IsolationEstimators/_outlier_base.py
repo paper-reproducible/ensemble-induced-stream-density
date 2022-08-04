@@ -21,14 +21,19 @@ class BaseAnomalyDetector(BaseEstimator, OutlierMixin):
             self.fitted_X_ = X
         return self
 
-    def predict(self, X, y=None):
-        xp, xpUtils = get_array_module(X)
+    def decision_function(self, X):
+        xp, _ = get_array_module(X)
         if self.fitted_X_ is not None and xp.array_equal(self.fitted_X_, X):
             anomaly_scores = self.fitted_anomaly_score_
         else:
             anomaly_scores = self.score_samples(X)
         offset = self.offset_
         offsetted_scores = anomaly_scores - offset
+        return offsetted_scores
+
+    def predict(self, X, y=None):
+        xp, xpUtils = get_array_module(X)
+        offsetted_scores = self.decision_function(X)
         inliers = xp.ones_like(offsetted_scores, dtype=offsetted_scores.dtype)
         outliers = xp.where(offsetted_scores < 0)[0]
         if outliers.shape[0] > 0:
