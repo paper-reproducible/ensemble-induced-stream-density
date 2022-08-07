@@ -3,11 +3,12 @@ from sklearn.base import TransformerMixin, DensityMixin
 from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
+from ._voronoi_soft import SoftVoronoiPartitioning
 from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
 from ._fuzzy import FuzziPartitioning
 from ._inn import INNPartitioning
 from Common import get_array_module
-from ._constants import ANNE, IFOREST, FUZZI, INNE
+from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
 
 
 class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
@@ -29,6 +30,8 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             base_transformer = FuzziPartitioning(psi, **kwargs)
         elif partitioning_type == INNE:
             base_transformer = INNPartitioning(psi, **kwargs)
+        elif partitioning_type == SOFT_ANNE:
+            base_transformer = SoftVoronoiPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
         super().__init__(base_transformer, t, n_jobs, verbose, parallel)

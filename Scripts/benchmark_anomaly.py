@@ -66,6 +66,30 @@ def estimator(name, psi, t=1000, parallel=None):
             partitioning_type="anne",
             parallel=parallel,
         )
+    if name == "anne_dis":
+        return lambda: IsolationBasedAnomalyDetector(
+            psi,
+            t,
+            mass_based=False,
+            partitioning_type="anne",
+            parallel=parallel,
+        )
+    if name == "soft_anne_mass":
+        return lambda: IsolationBasedAnomalyDetector(
+            psi,
+            t,
+            mass_based=True,
+            partitioning_type="soft_anne",
+            parallel=parallel,
+        )
+    if name == "soft_anne_dis":
+        return lambda: IsolationBasedAnomalyDetector(
+            psi,
+            t,
+            mass_based=False,
+            partitioning_type="soft_anne",
+            parallel=parallel,
+        )
 
 
 def predict_once(e, X, contamination="auto"):
@@ -228,7 +252,7 @@ def pred_eval(dataset_name, folder="./Data", t=1000, xp=np, parallel=None, debug
 
 
 def main(t=1000, folder="./Data", use_tensorflow=False, use_cupy=False, debug=False):
-    np.set_printoptions(precision=2, linewidth=150)
+    np.set_printoptions(precision=4, suppress=True, linewidth=150)
     xp = init_xp(use_tensorflow, use_cupy)
 
     all_evaluate_results = []
@@ -391,9 +415,12 @@ def load_sklearn(dataset_name, xp=np):
 
 estimator_names = [
     "fuzzi_mass",
-    "anne_mass",
+    "soft_anne_mass",
+    "soft_anne_dis",
     "inne_mass",
     "inne_ratio",
+    "anne_mass",
+    "anne_dis",
     "iforest_mass",
     "iforest_path",
 ]
