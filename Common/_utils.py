@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from ._xp_utils import get_array_module
 
 
 def set_printoptions():
@@ -55,3 +56,10 @@ def call_by_argv(func, start=1):
             kwargs[k] = parse_v(v)
 
     return func(*args, **kwargs)
+
+
+def min_max_scale(X):
+    xp, _ = get_array_module(X)
+    X_ = X - xp.min(X, axis=0, keepdims=True)
+    X_ = X_ / xp.max(X_, axis=0, keepdims=True)
+    return X_

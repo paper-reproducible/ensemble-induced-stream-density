@@ -31,7 +31,8 @@ def _tensor_scatter_nd_update(X, indices, updates):
 
 
 def _softmax(X, axis, xp=numpy):
-    return xp.exp(X) / xp.sum(xp.exp(X), axis, keepdims=True)
+    X_ = X - xp.max(X, axis=axis)
+    return xp.exp(X_) / xp.sum(xp.exp(X_), axis, keepdims=True)
 
 
 def _setup_xp(xpUtils, xp):
