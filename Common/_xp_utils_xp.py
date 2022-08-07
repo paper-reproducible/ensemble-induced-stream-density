@@ -11,10 +11,10 @@ def _unique(X, xp=numpy):
             _, idx = xp.unique(X_, return_index=True)
             X_ = X[idx]
         else:
-            sortarr     = X[xp.lexsort(X.T[::-1])]
-            mask        = xp.empty(X.shape[0], dtype=xp.bool_)
-            mask[0]     = True
-            mask[1:]    = xp.any(sortarr[1:] != sortarr[:-1], axis=1)
+            sortarr = X[xp.lexsort(X.T[::-1])]
+            mask = xp.empty(X.shape[0], dtype=xp.bool_)
+            mask[0] = True
+            mask[1:] = xp.any(sortarr[1:] != sortarr[:-1], axis=1)
             X_ = sortarr[mask]
     elif len(X.shape) == 1:
         X_ = xp.unique(X)
@@ -30,6 +30,10 @@ def _tensor_scatter_nd_update(X, indices, updates):
     return X_
 
 
+def _softmax(X, axis, xp=numpy):
+    return xp.exp(X) / xp.sum(xp.exp(X), axis, keepdims=True)
+
+
 def _setup_xp(xpUtils, xp):
     setattr(xpUtils, "unique", lambda X: _unique(X, xp))
     setattr(xpUtils, "copy", lambda X: X.copy())
@@ -43,6 +47,7 @@ def _setup_xp(xpUtils, xp):
         lambda X, indices: X[tuple([indices[:, i] for i in range(indices.shape[1])])],
     )
     setattr(xpUtils, "percentile", xp.percentile)
+    setattr(xpUtils, "softmax", lambda X, axis=-1: _softmax(X, axis, xp))
     return xp
 
 
