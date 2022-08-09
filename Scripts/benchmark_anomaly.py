@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import h5py
-import scipy.io
 from time import time
 from joblib import Parallel
 from sklearn.ensemble import IsolationForest
@@ -17,6 +15,7 @@ from IsolationEstimators import (
     IsolationBasedAnomalyDetector,
     IsolationForestAnomalyDetector,
 )
+from Data._outliers import load_odds, load_sklearn_real, load_sklearn_artificial
 
 
 def estimator(name, psi, t=1000, parallel=None):
@@ -281,78 +280,6 @@ def main(t=1000, folder="./Data", use_tensorflow=False, use_cupy=False, debug=Fa
     return
 
 
-# https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_outlier_detection_bench.html
-def preprocess_dataset(dataset_name):
-    from sklearn.datasets import fetch_kddcup99, fetch_covtype, fetch_openml
-    from sklearn.preprocessing import LabelBinarizer
-
-    rng = np.random.RandomState(42)
-
-    # loading and vectorization
-    # print(f"Loading {dataset_name} data")
-    if dataset_name in ["http", "smtp", "SA", "SF"]:
-        dataset = fetch_kddcup99(subset=dataset_name, percent10=True, random_state=rng)
-        X = dataset.data
-        y = dataset.target
-        lb = LabelBinarizer()
-
-        if dataset_name == "SF":
-            idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
-            X = X[idx]  # reduce the sample size
-            y = y[idx]
-            x1 = lb.fit_transform(X[:, 1].astype(str))
-            X = np.c_[X[:, :1], x1, X[:, 2:]]
-        elif dataset_name == "SA":
-            idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
-            X = X[idx]  # reduce the sample size
-            y = y[idx]
-            x1 = lb.fit_transform(X[:, 1].astype(str))
-            x2 = lb.fit_transform(X[:, 2].astype(str))
-            x3 = lb.fit_transform(X[:, 3].astype(str))
-            X = np.c_[X[:, :1], x1, x2, x3, X[:, 4:]]
-        y = (y != b"normal.").astype(int)
-    if dataset_name == "forestcover":
-        dataset = fetch_covtype()
-        X = dataset.data
-        y = dataset.target
-        idx = rng.choice(X.shape[0], int(X.shape[0] * 0.1), replace=False)
-        X = X[idx]  # reduce the sample size
-        y = y[idx]
-
-        # inliers are those with attribute 2
-        # outliers are those with attribute 4
-        s = (y == 2) + (y == 4)
-        X = X[s, :]
-        y = y[s]
-        y = (y != 2).astype(int)
-    if dataset_name in ["glass", "wdbc", "cardiotocography"]:
-        dataset = fetch_openml(name=dataset_name, version=1, as_frame=False)
-        X = dataset.data
-        y = dataset.target
-
-        if dataset_name == "glass":
-            s = y == "tableware"
-            y = s.astype(int)
-        if dataset_name == "wdbc":
-            s = y == "2"
-            y = s.astype(int)
-            X_mal, y_mal = X[s], y[s]
-            X_ben, y_ben = X[~s], y[~s]
-
-            # downsampled to 39 points (9.8% outliers)
-            idx = rng.choice(y_mal.shape[0], 39, replace=False)
-            X_mal2 = X_mal[idx]
-            y_mal2 = y_mal[idx]
-            X = np.concatenate((X_ben, X_mal2), axis=0)
-            y = np.concatenate((y_ben, y_mal2), axis=0)
-        if dataset_name == "cardiotocography":
-            s = y == "3"
-            y = s.astype(int)
-    # 0 represents inliers, and 1 represents outliers
-    y = pd.Series(y, dtype="category")
-    return (X, y)
-
-
 def plot_roc(
     dataset_name, y_true, estimator_y_score, show=True, block=True, fig=None, ax=None
 ):
@@ -388,88 +315,6 @@ def plot_roc(
     return fig, ax
 
 
-def load_sklearn_artificial(i, xp):
-    from sklearn.datasets import make_moons, make_blobs
-
-    rng = np.random.RandomState(42)
-    n_samples = 300
-    outliers_fraction = 0.15
-    n_outliers = int(outliers_fraction * n_samples)
-    n_inliers = n_samples - n_outliers
-
-    blobs_params = dict(random_state=0, n_samples=n_inliers, n_features=2)
-
-    X = None
-
-    if i == 3:
-        X, y = make_moons(n_samples=(n_outliers, n_inliers), noise=0.05, random_state=0)
-        X = xp.array(4.0 * (X - np.array([0.5, 0.25])))
-        y = xp.where(y == 0, -1, y)
-        # X = 4.0 * (
-        #     make_moons(n_samples=n_samples, noise=0.05, random_state=0)[0]
-        #     - np.array([0.5, 0.25])
-        # )
-    elif i == 4:
-        X = 14.0 * (np.random.RandomState(42).rand(n_samples, 2) - 0.5)
-        X = xp.array(X)
-        y = xp.ones(n_samples)
-    else:
-        if i == 0:
-            X = make_blobs(centers=[[0, 0], [0, 0]], cluster_std=0.5, **blobs_params)[0]
-        if i == 1:
-            X = make_blobs(
-                centers=[[2, 2], [-2, -2]], cluster_std=[0.5, 0.5], **blobs_params
-            )[0]
-        if i == 2:
-            X = make_blobs(
-                centers=[[2, 2], [-2, -2]], cluster_std=[1.5, 0.3], **blobs_params
-            )[0]
-
-        X = xp.concatenate(
-            [X, rng.uniform(low=-6, high=6, size=(n_outliers, 2))], axis=0
-        )
-        y = xp.concatenate([np.ones(n_inliers), -np.ones(n_outliers)], axis=0)
-
-    return X, y
-
-
-def load_odds(folder, dataset_name, xp=np):
-    file_name = folder + "/" + dataset_name + ".mat"
-    try:
-        f = h5py.File(file_name, "r")
-    except:
-        f = scipy.io.loadmat(file_name)
-    X = xp.array(f.get("X"))
-    y = xp.array(f.get("y"))
-    if len(y.shape) == 2:
-        if y.shape[1] == 1:
-            y = xp.squeeze(y, axis=1)
-        elif y.shape[0] == 1:
-            y = xp.squeeze(y, axis=0)
-    if X.shape[1] == y.shape[0]:
-        X = xp.transpose(X)
-    labels = xp.sort(xp.unique(y))
-    if labels.shape[0] == 2 and labels[0] == 0 and labels[1] == 1:
-        y = xp.where(y == 1, -1, y)
-        y = xp.where(y == 0, 1, y)
-    elif xp.min(labels) < 0:
-        y = xp.where(y >= 0, 1, y)
-        y = xp.where(y < 0, -1, y)
-    else:
-        raise Exception("Unsupported label format")
-    return X, y
-
-
-def load_sklearn(dataset_name, xp=np):
-    X, y = preprocess_dataset(dataset_name)
-    X = xp.array(X, dtype=float)
-    y = xp.array(y, dtype=int)
-    # For sklearn data
-    y = xp.where(y == 1, -1, y)
-    y = xp.where(y == 0, 1, y)
-    return X, y
-
-
 estimator_names = [
     "fuzzi_mass",
     "soft_anne_mass",
@@ -479,8 +324,8 @@ estimator_names = [
     "anne_mass",
     "anne_dis",
     "iforest_sklearn",
-    # "iforest_mass",
-    # "iforest_path",
+    "iforest_mass",
+    "iforest_path",
 ]
 
 dataset_configs = {
@@ -493,42 +338,42 @@ dataset_configs = {
         "psi_values": [2],
     },
     "http": {
-        "data": lambda xp: load_sklearn("http", xp),
+        "data": lambda xp: load_sklearn_real("http", xp),
         "contamination": 2209.0 / (2209.0 + 56516.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "smtp": {
-        "data": lambda xp: load_sklearn("smtp", xp),
+        "data": lambda xp: load_sklearn_real("smtp", xp),
         "contamination": 3.0 / (3.0 + 9568.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "SA": {
-        "data": lambda xp: load_sklearn("SA", xp),
+        "data": lambda xp: load_sklearn_real("SA", xp),
         "contamination": 344.0 / (344.0 + 9721.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "SF": {
-        "data": lambda xp: load_sklearn("SF", xp),
+        "data": lambda xp: load_sklearn_real("SF", xp),
         "contamination": 320.0 / (320.0 + 7003.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "forestcover": {
-        "data": lambda xp: load_sklearn("forestcover", xp),
+        "data": lambda xp: load_sklearn_real("forestcover", xp),
         "contamination": 259.0 / (259.0 + 28248.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "glass": {
-        "data": lambda xp: load_sklearn("glass", xp),
+        "data": lambda xp: load_sklearn_real("glass", xp),
         "contamination": 9.0 / (9.0 + 205.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "wdbc": {
-        "data": lambda xp: load_sklearn("wdbc", xp),
+        "data": lambda xp: load_sklearn_real("wdbc", xp),
         "contamination": 39.0 / (39.0 + 357.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
     "cardiotocography": {
-        "data": lambda xp: load_sklearn("cardiotocography", xp),
+        "data": lambda xp: load_sklearn_real("cardiotocography", xp),
         "contamination": 53.0 / (53.0 + 2073.0),
         "psi_values": [2, 4, 8, 16, 32],
     },
@@ -538,28 +383,28 @@ dataset_configs = {
         "psi_values": [2, 4, 8, 16, 32],
     },
     "single_blob": {
-        "data": lambda xp: load_sklearn_artificial(0, xp),
+        "data": lambda xp: load_sklearn_artificial("one_blob", xp),
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
     "two_blobs": {
-        "data": lambda xp: load_sklearn_artificial(1, xp),
+        "data": lambda xp: load_sklearn_artificial("two_blobs", xp),
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
     "imba_blobs": {
-        "data": lambda xp: load_sklearn_artificial(2, xp),
+        "data": lambda xp: load_sklearn_artificial("imbalanced", xp),
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
     "two_moons": {
-        "data": lambda xp: load_sklearn_artificial(3, xp),
+        "data": lambda xp: load_sklearn_artificial("two_moons", xp),
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
     ## ROC_AUC does not work as th
     # "uniform": {
-    #     "data": lambda xp: load_sklearn_artificial(4, xp),
+    #     "data": lambda xp: load_sklearn_artificial("uniform", xp),
     #     "contamination": 0.15,
     #     "psi_values": [2, 4, 8, 16, 32],
     # },
