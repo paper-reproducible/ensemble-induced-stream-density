@@ -55,7 +55,6 @@ def estimator(name, psi, t=1000, parallel=None):
         return lambda: IsolationForestAnomalyDetector(
             psi,
             t,
-            contamination=0.2,
             mass_based=False,
             parallel=parallel,
         )
@@ -413,13 +412,6 @@ dataset_configs = {
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
-    ##################################################################
-    # ROC_AUC does not work
-    # "uniform": {
-    #     "data": lambda xp: load_sklearn_artificial("uniform", xp),
-    #     "contamination": 0.15,
-    #     "psi_values": [2, 4, 8, 16, 32],
-    # },
 }
 
 _n_jobs = 32

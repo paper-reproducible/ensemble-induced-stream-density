@@ -31,7 +31,7 @@ def load_odds(folder, dataset_name, xp=np):
     return X, y
 
 
-# https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_anomaly_comparison.html#sphx-glr-auto-examples-miscellaneous-plot-anomaly-comparison-py
+# https://scikit-learn.org/stable/auto_examples/miscellaneous/plot_anomaly_comparison.html
 def load_sklearn_artificial(name, xp):
     from sklearn.datasets import make_moons, make_blobs
 
@@ -44,30 +44,27 @@ def load_sklearn_artificial(name, xp):
 
     X, y = (None, None)
 
-    if name == "two_moons":
-        X, y = make_moons(n_samples=(n_outliers, n_inliers), noise=0.05, random_state=0)
-        X = xp.array(4.0 * (X - np.array([0.5, 0.25])))
-        y = xp.where(y == 0, -1, y)
+    rng = np.random.RandomState(42)
+    if name == "one_blob":
+        X = make_blobs(centers=[[0, 0], [0, 0]], cluster_std=0.5, **blobs_params)[0]
+    elif name == "two_blobs":
+        X = make_blobs(
+            centers=[[2, 2], [-2, -2]], cluster_std=[0.5, 0.5], **blobs_params
+        )[0]
+    elif name == "imbalanced":
+        X = make_blobs(
+            centers=[[2, 2], [-2, -2]], cluster_std=[1.5, 0.3], **blobs_params
+        )[0]
+    elif name == "two_moons":
+        X = 4.0 * (
+            make_moons(n_samples=n_samples, noise=0.05, random_state=0)[0]
+            - np.array([0.5, 0.25])
+        )
     elif name == "uniform":
         X = 14.0 * (np.random.RandomState(42).rand(n_samples, 2) - 0.5)
-        X = xp.array(X)
-        y = xp.ones(n_samples)
-    else:
-        rng = np.random.RandomState(42)
-        if name == "one_blob":
-            X = make_blobs(centers=[[0, 0], [0, 0]], cluster_std=0.5, **blobs_params)[0]
-        if name == "two_blobs":
-            X = make_blobs(
-                centers=[[2, 2], [-2, -2]], cluster_std=[0.5, 0.5], **blobs_params
-            )[0]
-        if name == "imbalanced":
-            X = make_blobs(
-                centers=[[2, 2], [-2, -2]], cluster_std=[1.5, 0.3], **blobs_params
-            )[0]
-        X = xp.concatenate(
-            [X, rng.uniform(low=-6, high=6, size=(n_outliers, 2))], axis=0
-        )
-        y = xp.concatenate([np.ones(n_inliers), -np.ones(n_outliers)], axis=0)
+
+    y = xp.concatenate([np.ones(X.shape[0]), -np.ones(n_outliers)], axis=0)
+    X = xp.concatenate([X, rng.uniform(low=-6, high=6, size=(n_outliers, 2))], axis=0)
 
     return X, y
 

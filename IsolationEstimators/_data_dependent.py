@@ -123,7 +123,29 @@ class DEMassEstimator(IncrementalMassEstimator):
 
 
 class MassEstimator(IsolationTransformer, DensityMixin):
-    # TODO: split this to fit and allow different datasets for fit and score.
+    def fit(self, X, y=None):
+        super().fit(X, y)
+        return self.partial_fit(X, y)
+
+    def partial_fit(self, X, y=None):
+        def loop_body(transformer):
+            xp, _ = get_array_module(X)
+            psi = transformer.psi
+            indices = transformer.transform(X)
+            if indices.shape[1] == 1:
+                encoded = xp.expand_dims(xp.arange(psi), axis=0) == indices
+            elif indices.shape[1] == transformer.psi:
+                encoded = indices
+
+            if hasattr(transformer, "region_mass_"):
+                transformer.region_mass_ += xp.sum(encoded, axis=0)
+            else:
+                transformer.region_mass_ = xp.sum(encoded, axis=0)
+            return transformer
+
+        self.parallel()(delayed(loop_body)(i) for i in self.transformers_)
+        return self
+
     def score(self, X, y=None):
         xp, _ = get_array_module(X)
 
@@ -139,7 +161,7 @@ class MassEstimator(IsolationTransformer, DensityMixin):
                 encoded = xp.expand_dims(xp.arange(psi), axis=0) == indices
             elif indices.shape[1] == transformer.psi:
                 encoded = indices
-            region_mass = xp.sum(encoded, axis=0)
+            region_mass = transformer.region_mass_
             X_mass = xp.sum(encoded * xp.expand_dims(region_mass, 0), axis=1)
             return X_mass
 
