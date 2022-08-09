@@ -58,13 +58,6 @@ class IsolationTree(
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
         split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
 
-        if is_check_and_warn_enabled():
-            check_and_warn(
-                numpy.any(lower_boundary == split_value)
-                or numpy.any(upper_boundary == split_value),
-                "[DEBUG] _isolation_split is resulting a compressed region",
-            )
-
         return False, split_dim, split_value, l_in
 
     def _build_tree(self):

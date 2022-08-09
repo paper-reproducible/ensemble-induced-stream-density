@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import pandas as pd
 from time import time
+from datetime import datetime
 from joblib import Parallel
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
@@ -248,13 +250,9 @@ def pred_eval(dataset_name, folder="./Data", t=1000, xp=np, parallel=None, debug
     fig.savefig(folder + "/anomaly_roc_" + dataset_name + ".eps", format="eps")
 
     df_label_results = pred_results_to_df(label_results, X.shape[0])
-    if debug:
-        print(df_label_results)
     save_parquet(df_label_results, folder + "/anomaly_label_" + dataset_name)
 
     df_score_results = pred_results_to_df(score_results, X.shape[0])
-    if debug:
-        print(df_score_results)
     save_parquet(df_score_results, folder + "/anomaly_score_" + dataset_name)
 
     for i in range(len(evaluate_results)):
@@ -262,12 +260,25 @@ def pred_eval(dataset_name, folder="./Data", t=1000, xp=np, parallel=None, debug
     return evaluate_results
 
 
-def main(t=1000, folder="./Data", use_tensorflow=False, use_cupy=False, debug=False):
+def main(
+    t=1000,
+    folder="./Data",
+    use_tensorflow=False,
+    use_cupy=False,
+    debug=False,
+    time_format="%Y%m%d%H%M%S",
+):
     np.set_printoptions(precision=4, suppress=True, linewidth=150)
     xp = init_xp(use_tensorflow, use_cupy)
 
+    if time_format is not None:
+        subfolder = folder + "/" + datetime.now().strftime(time_format)
+        if not os.path.exists(subfolder):
+            os.makedirs(subfolder)
+        folder = subfolder
+
     all_evaluate_results = []
-    with Parallel(n_jobs=32, prefer="threads") as parallel:
+    with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
         for dataset_name in dataset_configs:
             evaluate_results = pred_eval(
                 dataset_name, folder, t=t, xp=xp, parallel=parallel, debug=debug
@@ -402,13 +413,16 @@ dataset_configs = {
         "contamination": 0.15,
         "psi_values": [2, 4, 8, 16, 32],
     },
-    ## ROC_AUC does not work as th
+    ##################################################################
+    # ROC_AUC does not work
     # "uniform": {
     #     "data": lambda xp: load_sklearn_artificial("uniform", xp),
     #     "contamination": 0.15,
     #     "psi_values": [2, 4, 8, 16, 32],
     # },
 }
+
+_n_jobs = 32
 
 if __name__ == "__main__":
     main(
