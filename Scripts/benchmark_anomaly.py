@@ -4,6 +4,7 @@ import h5py
 import scipy.io
 from time import time
 from joblib import Parallel
+from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 from Common import (
     get_array_module,
@@ -42,6 +43,12 @@ def estimator(name, psi, t=1000, parallel=None):
             mass_based=False,
             partitioning_type="inne",
             parallel=parallel,
+        )
+    if name == "iforest_sklearn":
+        return lambda: IsolationForest(
+            max_samples=psi,
+            n_estimators=t,
+            n_jobs=32,
         )
     if name == "iforest_path":
         return lambda: IsolationForestAnomalyDetector(
@@ -134,6 +141,7 @@ def pred_eval_params(
     parallel=None,
     debug=False,
 ):
+    _, xpUtils = get_array_module(X)
     all_label_results = []  # [n_names*n_psis*n_rounds, 3+n]
     all_score_results = []  # [n_names*n_psis*n_rounds, 3+n]
     all_metric_results = []
@@ -143,7 +151,11 @@ def pred_eval_params(
             e = estimator(estimator_name, psi, t, parallel)
             label_results, score_results, metric_results = predict_rounds(
                 e,
-                X_ if estimator_name.startswith("iforest") else X,
+                xpUtils.to_numpy(X)
+                if estimator_name == "iforest_sklearn"
+                else X_
+                if estimator_name.startswith("iforest")
+                else X,
                 y_true,
                 contamination,
                 n_rounds,
@@ -376,6 +388,51 @@ def plot_roc(
     return fig, ax
 
 
+def load_sklearn_artificial(i, xp):
+    from sklearn.datasets import make_moons, make_blobs
+
+    rng = np.random.RandomState(42)
+    n_samples = 300
+    outliers_fraction = 0.15
+    n_outliers = int(outliers_fraction * n_samples)
+    n_inliers = n_samples - n_outliers
+
+    blobs_params = dict(random_state=0, n_samples=n_inliers, n_features=2)
+
+    X = None
+
+    if i == 3:
+        X, y = make_moons(n_samples=(n_outliers, n_inliers), noise=0.05, random_state=0)
+        X = xp.array(4.0 * (X - np.array([0.5, 0.25])))
+        y = xp.where(y == 0, -1, y)
+        # X = 4.0 * (
+        #     make_moons(n_samples=n_samples, noise=0.05, random_state=0)[0]
+        #     - np.array([0.5, 0.25])
+        # )
+    elif i == 4:
+        X = 14.0 * (np.random.RandomState(42).rand(n_samples, 2) - 0.5)
+        X = xp.array(X)
+        y = xp.ones(n_samples)
+    else:
+        if i == 0:
+            X = make_blobs(centers=[[0, 0], [0, 0]], cluster_std=0.5, **blobs_params)[0]
+        if i == 1:
+            X = make_blobs(
+                centers=[[2, 2], [-2, -2]], cluster_std=[0.5, 0.5], **blobs_params
+            )[0]
+        if i == 2:
+            X = make_blobs(
+                centers=[[2, 2], [-2, -2]], cluster_std=[1.5, 0.3], **blobs_params
+            )[0]
+
+        X = xp.concatenate(
+            [X, rng.uniform(low=-6, high=6, size=(n_outliers, 2))], axis=0
+        )
+        y = xp.concatenate([np.ones(n_inliers), -np.ones(n_outliers)], axis=0)
+
+    return X, y
+
+
 def load_odds(folder, dataset_name, xp=np):
     file_name = folder + "/" + dataset_name + ".mat"
     try:
@@ -421,8 +478,9 @@ estimator_names = [
     "inne_ratio",
     "anne_mass",
     "anne_dis",
-    "iforest_mass",
-    "iforest_path",
+    "iforest_sklearn",
+    # "iforest_mass",
+    # "iforest_path",
 ]
 
 dataset_configs = {
@@ -479,11 +537,37 @@ dataset_configs = {
         "contamination": 700.0 / 7603.0,
         "psi_values": [2, 4, 8, 16, 32],
     },
+    "single_blob": {
+        "data": lambda xp: load_sklearn_artificial(0, xp),
+        "contamination": 0.15,
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "two_blobs": {
+        "data": lambda xp: load_sklearn_artificial(1, xp),
+        "contamination": 0.15,
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "imba_blobs": {
+        "data": lambda xp: load_sklearn_artificial(2, xp),
+        "contamination": 0.15,
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    "two_moons": {
+        "data": lambda xp: load_sklearn_artificial(3, xp),
+        "contamination": 0.15,
+        "psi_values": [2, 4, 8, 16, 32],
+    },
+    ## ROC_AUC does not work as th
+    # "uniform": {
+    #     "data": lambda xp: load_sklearn_artificial(4, xp),
+    #     "contamination": 0.15,
+    #     "psi_values": [2, 4, 8, 16, 32],
+    # },
 }
 
 if __name__ == "__main__":
     main(
         use_tensorflow=False,
-        use_cupy=True,
+        use_cupy=False,
         debug=True,
     )
