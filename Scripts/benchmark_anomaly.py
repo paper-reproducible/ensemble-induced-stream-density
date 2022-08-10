@@ -409,7 +409,7 @@ dataset_configs = {
     },
     "two_moons": {
         "data": lambda xp: load_sklearn_artificial("two_moons", xp),
-        "contamination": 0.15,
+        "contamination": 45.0/345.0,
         "psi_values": [2, 4, 8, 16, 32],
     },
 }

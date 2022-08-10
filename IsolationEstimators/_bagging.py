@@ -1,26 +1,17 @@
 from sklearn.base import BaseEstimator, clone
 from joblib import Parallel, delayed
-from ._isolation_tree import IsolationTree
 from Common import get_array_module
 
 
-def _single_fit(transformer, X):
-    transformer.fit(X)
-    return transformer
-
-
-def _single_partial_fit(transformer, X):
-    transformer.partial_fit(X)
-    return transformer
-
-
 class BaseBaggingEstimator(BaseEstimator):
-    def __init__(self, base_transformer, t, n_jobs=16, verbose=0, parallel=None):
-        self.base_transformer = base_transformer
+    def __init__(
+        self, transformer_factory, t, n_jobs=16, verbose=0, parallel=None, **kwargs
+    ):
+        self.transformer_factory = transformer_factory
         self.t = t
         self.n_jobs = n_jobs
         self.verbose = verbose
-        self.transformers_ = [clone(base_transformer) for _ in range(t)]
+        # self.transformers_ = [transformer_factory() for _ in range(t)]
         self.fitted = 0
         self.preset_parallel = parallel
 
@@ -30,16 +21,15 @@ class BaseBaggingEstimator(BaseEstimator):
         else:
             return self.preset_parallel
 
-    def fit(self, X, y=None, deduplicated=False):
-        if isinstance(self.base_transformer, IsolationTree):
-            _, xpUtils = get_array_module(X)
-            if not deduplicated:
-                X = xpUtils.unique(X)
+    def fit(self, X, y=None):
+        def single_fit(bagger, X):
+            e = bagger.transformer_factory()
+            e.fit(X)
+            return e
 
         self.transformers_ = self.parallel()(
-            delayed(_single_fit)(i, X) for i in self.transformers_
+            delayed(single_fit)(self, X) for _ in range(self.t)
         )
-
         self.fitted = X.shape[0]
         return self
 
@@ -50,7 +40,7 @@ class BaseAdaptiveBaggingEstimator(BaseBaggingEstimator):
             return self.fit(X, y)
 
         self.transformers_ = self.parallel()(
-            delayed(_single_partial_fit)(i, X) for i in self.transformers_
+            delayed(i.partial_fit)(X) for i in self.transformers_
         )
 
         self.fitted = self.fitted + X.shape[0]

@@ -27,7 +27,7 @@ KERNEL_GAUSSIAN = "gaussian"
 
 
 class SingleKDE(ReservoirSamplingEstimator, DensityMixin):
-    def __init__(self, psi, bandwidth, kernel=KERNEL_GAUSSIAN):
+    def __init__(self, psi, bandwidth, kernel=KERNEL_GAUSSIAN, **kwargs):
         super().__init__(psi)
         self.bandwidth = bandwidth
         self.kernel = kernel

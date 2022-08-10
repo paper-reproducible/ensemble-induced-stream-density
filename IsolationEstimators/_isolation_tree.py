@@ -27,12 +27,25 @@ def get_boundaries(X, ball_scaled=True):
 class IsolationTree(
     ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin
 ):
-    def __init__(self, psi, **kwargs):
+    def __init__(self, psi, rotation=False, global_boundaries=None, **kwargs):
         super().__init__(psi)
+        self.rotation = rotation
+        self.global_boundaries = global_boundaries
+        return
 
-    def fit(self, X, y=None, ball_scaled=True):
+    def fit(self, X, y=None):
+        if self.rotation:
+            X_, SO = rotate(X)
+            self.SO_ = SO
+        else:
+            X_ = X
         super().fit(X, y)
-        global_lower_boundary, global_upper_boundary = get_boundaries(X, ball_scaled)
+        if self.global_boundaries is not None:
+            global_lower_boundary, global_upper_boundary = self.global_boundaries
+        else:
+            global_lower_boundary, global_upper_boundary = get_boundaries(
+                X_, self.rotation
+            )
         super().seed(global_lower_boundary, global_upper_boundary)
         self._build_tree()
         return self
@@ -82,7 +95,11 @@ class IsolationTree(
 
     def partial_fit(self, X, y=None):
         xp, _ = get_array_module(X)
-        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X)
+        if self.rotation:
+            X_, _ = rotate(X, self.SO_)
+        else:
+            X_ = X
+        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X_)
 
         for i in range(changed_count):
             drop_sample = drop_samples[i : i + 1, :]
@@ -97,10 +114,10 @@ class IsolationTree(
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X_), axis=0, dtype=float)
 
         self.samples_ = reservoir
-        self.fitted = self.fitted + X.shape[0]
+        self.fitted = self.fitted + X_.shape[0]
 
         # TODO
         # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
@@ -146,56 +163,27 @@ class IsolationTree(
 
     def transform(self, X):
         xp, _ = get_array_module(X)
-        l_in = self.search(X, self.node_is_leaf_)
+        if self.rotation:
+            X_, _ = rotate(X, self.SO_)
+        else:
+            X_ = X
+        l_in = self.search(X_, self.node_is_leaf_)
         _, indices = xp.where(l_in)
         indices = xp.expand_dims(indices, axis=1)
         return indices
 
 
-class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
-    def __init__(self, psi, rotation=False):
-        super().__init__(psi)
+class AdaptiveMassEstimationTree(IsolationTree, DensityMixin):
+    def __init__(self, psi, **kwargs):
+        super().__init__(psi, **kwargs)
         self.fitted = 0
-        self.rotation = rotation
 
     def fit(self, X, y=None):
         xp, _ = get_array_module(X)
-        if self.rotation:
-            X, SO = rotate(X)
-            self.SO_ = SO
         super().fit(X, y)
         self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=float)
         self.fitted = X.shape[0]
         # self.node_volumes_ = self.volumes() # included in fit
-
-    def partial_fit(self, X, y=None):
-        xp, _ = get_array_module(X)
-        if self.rotation:
-            X, _ = rotate(X, self.SO_)
-        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X)
-
-        for i in range(changed_count):
-            drop_sample = drop_samples[i : i + 1, :]
-            self._prune(drop_sample)
-            # TODO
-            # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
-            # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-
-            new_sample = new_samples[i : i + 1, :]
-            self._grow(new_sample)
-            # TODO
-            # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
-            # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-
-        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
-
-        self.samples_ = reservoir
-        self.fitted = self.fitted + X.shape[0]
-
-        # TODO
-        # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-        # print(self.fitted)
-        return self
 
     def _grow(self, new_sample):
         xp, _ = get_array_module(new_sample)
@@ -220,10 +208,7 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
 
     def score(self, X, y=None, return_demass=True):
         xp, _ = get_array_module(X)
-        if self.rotation:
-            X, _ = rotate(X, self.SO_)
-        l_in = self.search(X, self.node_is_leaf_)
-        indices = xp.where(l_in)[1]  # 1 is the axis to "reduce"
+        indices = super().transform(X)[:, 0]
         l_leaf_mass = self.node_mass_[self.node_is_leaf_]
         if return_demass:
             l_leaf_volumes = self.node_volumes_[self.node_is_leaf_]

@@ -29,10 +29,7 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
             anomaly_detection=True,
             **kwargs
         )
-        if hasattr(self.mass_estimator.base_transformer, "score_samples"):
-            self.mass_based = mass_based
-        else:
-            self.mass_based = True
+        self.mass_based = mass_based
 
     def fit(self, X, y=None):
         self.mass_estimator.fit(X, y)

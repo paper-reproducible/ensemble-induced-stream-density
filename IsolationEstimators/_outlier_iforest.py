@@ -44,6 +44,9 @@ class IsolationForestAnomalyDetector(BaseAnomalyDetector):
 
     def fit(self, X, y=None):
         self.iforest.fit(X, y)
+        # xp, _ = get_array_module(X)
+        # for tree in self.iforest.transformers_:
+        #     tree.backup = xp.copy(tree.combine_boundaries())
         return super().fit(X, y)
 
     def score_samples(self, X):
@@ -55,8 +58,11 @@ class IsolationForestAnomalyDetector(BaseAnomalyDetector):
 
             def loop_body(tree: IsolationTree):
                 indices = tree.transform(X)  # [n, 1] for itree
+                # if hasattr(tree, "backup"):
+                #     boundaries = tree.combine_boundaries()
+                #     print(xp.all(boundaries == tree.backup))
                 indices = xp.squeeze(indices, axis=1)
-                return xp.take(tree.node_levels, indices, axis=0)
+                return xp.take(tree.node_levels[tree.node_is_leaf_], indices, axis=0)
 
             levels = self.iforest.parallel()(
                 delayed(loop_body)(i) for i in self.iforest.transformers_

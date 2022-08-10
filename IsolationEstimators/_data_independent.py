@@ -8,7 +8,7 @@ from ._voronoi_soft import SoftVoronoiPartitioning
 from ._fuzzy import FuzziPartitioning
 from ._inn import INNPartitioning
 from Common import get_array_module, ball_samples
-from ._constants import ANNE, IFOREST, FUZZI,INNE, SOFT_ANNE
+from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
 
 
 def _single_fit(transformer, X):
@@ -64,24 +64,25 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         **kwargs
     ):
         if partitioning_type == IFOREST:
-            base_transformer = IsolationTree(psi, **kwargs)
+            transformer_factory = lambda: IsolationTree(psi, **kwargs)
         elif partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi, **kwargs)
+            transformer_factory = lambda: VoronoiPartitioning(psi, **kwargs)
         elif partitioning_type == FUZZI:
-            base_transformer = FuzziPartitioning(psi, **kwargs)
+            transformer_factory = lambda: FuzziPartitioning(psi, **kwargs)
         elif partitioning_type == INNE:
-            base_transformer = INNPartitioning(psi, **kwargs)
+            transformer_factory = lambda: INNPartitioning(psi, **kwargs)
         elif partitioning_type == SOFT_ANNE:
-            base_transformer = SoftVoronoiPartitioning(psi, **kwargs)
+            transformer_factory = lambda: SoftVoronoiPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
-        super().__init__(base_transformer, t, n_jobs, verbose, parallel)
+        super().__init__(transformer_factory, t, n_jobs, verbose, parallel)
         self.psi = psi
         self.partitioning_type = partitioning_type
 
-    def fit(self, X, y=None, ball_scaled=True):
-        if not ball_scaled:
-            raise NotImplementedError()
+    def fit(self, X, y=None):
+        xp, xpUtils = get_array_module(X)
+        if xp.any(xpUtils.norm(X, axis=1) > 1):
+            raise NotImplementedError("The data need to be ball_scale-ed")
 
         self.transformers_ = self.parallel()(
             delayed(_single_fit)(i, X) for i in self.transformers_
@@ -91,6 +92,10 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         return self
 
     def partial_fit(self, X, y=None):
+        xp, xpUtils = get_array_module(X)
+        if xp.any(xpUtils.norm(X, axis=1) > 1):
+            raise NotImplementedError("The data need to be ball_scale-ed")
+
         if self.fitted == 0:
             return self.fit(X, y)
 
@@ -102,7 +107,9 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         return self
 
     def score(self, X, return_demass=False):
-        xp, _ = get_array_module(X)
+        xp, xpUtils = get_array_module(X)
+        if xp.any(xpUtils.norm(X, axis=1) > 1):
+            raise NotImplementedError("The data need to be ball_scale-ed")
 
         if return_demass and self.partitioning_type != IFOREST:
             return NotImplementedError()

@@ -4,7 +4,7 @@ from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._voronoi import VoronoiPartitioning
 from ._voronoi_soft import SoftVoronoiPartitioning
-from ._isolation_tree import IsolationTree, IncrementalMassEstimationTree
+from ._isolation_tree import IsolationTree, AdaptiveMassEstimationTree
 from ._fuzzy import FuzziPartitioning
 from ._inn import INNPartitioning
 from Common import get_array_module
@@ -23,18 +23,18 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
         **kwargs
     ):
         if partitioning_type == ANNE:
-            base_transformer = VoronoiPartitioning(psi, **kwargs)
+            transformer_factory = lambda: VoronoiPartitioning(psi, **kwargs)
         elif partitioning_type == IFOREST:
-            base_transformer = IsolationTree(psi, **kwargs)
+            transformer_factory = lambda: IsolationTree(psi, **kwargs)
         elif partitioning_type == FUZZI:
-            base_transformer = FuzziPartitioning(psi, **kwargs)
+            transformer_factory = lambda: FuzziPartitioning(psi, **kwargs)
         elif partitioning_type == INNE:
-            base_transformer = INNPartitioning(psi, **kwargs)
+            transformer_factory = lambda: INNPartitioning(psi, **kwargs)
         elif partitioning_type == SOFT_ANNE:
-            base_transformer = SoftVoronoiPartitioning(psi, **kwargs)
+            transformer_factory = lambda: SoftVoronoiPartitioning(psi, **kwargs)
         else:
             raise NotImplementedError()
-        super().__init__(base_transformer, t, n_jobs, verbose, parallel)
+        super().__init__(transformer_factory, t, n_jobs, verbose, parallel)
         self.psi = psi
         self.partitioning_type = partitioning_type
 
@@ -86,23 +86,28 @@ class IncrementalMassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         n_jobs=16,
         verbose=0,
         parallel=None,
-        rotation=True,
+        **kwargs
     ):
         if partitioning_type == IFOREST:
-            base_transformer = IncrementalMassEstimationTree(psi, rotation)
-        else:  # aNNE has no incremental implementation
+            transformer_factory = lambda: AdaptiveMassEstimationTree(psi, **kwargs)
+        else:  # aNNE and other partitionings are not adaptive
             raise NotImplementedError()
-        super().__init__(base_transformer, t, n_jobs, verbose, parallel)
+        super().__init__(transformer_factory, t, n_jobs, verbose, parallel, **kwargs)
         self.psi = psi
 
     def score(self, X, return_demass=False):
         xp, _ = get_array_module(X)
 
         def loop_body(estimator):
-            return estimator.score(X, return_demass)
+            result = estimator.score(X, return_demass)
+            # if hasattr(estimator, "backup"):
+            #     boundaries = estimator.combine_boundaries()
+            #     print(xp.all(boundaries == estimator.backup))
+            return result
 
         all_results = self.parallel()(delayed(loop_body)(i) for i in self.transformers_)
-        return xp.average(xp.array(all_results), axis=0)
+        result = xp.average(xp.array(all_results), axis=0)
+        return result
 
 
 class DEMassEstimator(IncrementalMassEstimator):
@@ -114,9 +119,9 @@ class DEMassEstimator(IncrementalMassEstimator):
         n_jobs=16,
         verbose=0,
         parallel=None,
-        rotation=True,
+        **kwargs
     ):
-        super().__init__(psi, t, partitioning_type, n_jobs, verbose, parallel, rotation)
+        super().__init__(psi, t, partitioning_type, n_jobs, verbose, parallel, **kwargs)
 
     def score(self, X):
         return super().score(X, return_demass=True)

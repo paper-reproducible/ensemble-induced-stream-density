@@ -3,6 +3,7 @@ import time
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from joblib import Parallel
 from sklearn import svm
@@ -18,7 +19,7 @@ from IsolationEstimators import (
     IsolationForestAnomalyDetector,
 )
 
-# from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score
 from Data._outliers import load_sklearn_artificial
 from Common import ball_scale
 
@@ -32,7 +33,7 @@ dataset_configs = {
     "two_blobs": {
         "data": lambda xp=np: load_sklearn_artificial("two_blobs", xp),
         "contamination": 0.15,
-        "psi": 32,
+        "psi": 8,  # 32,
     },
     "imba_blobs": {
         "data": lambda xp=np: load_sklearn_artificial("imbalanced", xp),
@@ -51,7 +52,7 @@ dataset_configs = {
     },
 }
 
-_t = 1000
+_t = 100
 _n_jobs = 32
 
 estimator_configs = {
@@ -123,6 +124,9 @@ estimator_configs = {
         contamination=contamination,
         mass_based=False,
         parallel=parallel,
+        rotation=True,
+        # rotation=False,
+        # global_boundaries=(np.array([-7.0, -7.0]), np.array([7.0, 7.0])),
     ),
     "iforest_mass": lambda psi, contamination, parallel: IsolationForestAnomalyDetector(
         psi,
@@ -130,6 +134,9 @@ estimator_configs = {
         contamination=contamination,
         mass_based=True,
         parallel=parallel,
+        rotation=True,
+        # rotation=False,
+        # global_boundaries=(np.array([-7.0, -7.0]), np.array([7.0, 7.0])),
     ),
 }
 
@@ -139,7 +146,6 @@ matplotlib.rcParams["contour.negative_linestyle"] = "solid"
 # Compare given classifiers under given settings
 xx, yy = np.meshgrid(np.linspace(-7, 7, 150), np.linspace(-7, 7, 150))
 xxyy = np.c_[xx.ravel(), yy.ravel()]
-xxyy_ = ball_scale(xxyy)
 
 plt.figure(figsize=(len(estimator_configs) * 2 + 4, 12.5))
 plt.subplots_adjust(
@@ -155,7 +161,10 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
         X, y_true = dataset_config["data"]()
         psi = dataset_config["psi"]
         contamination = dataset_config["contamination"]
-        X_ = ball_scale(X)
+
+        scaled = ball_scale(np.concatenate([X, xxyy], axis=0))
+        X_ = scaled[: X.shape[0], :]
+        xxyy_ = scaled[X.shape[0] :, :]
 
         for estimator_name in estimator_configs:
             estimator_config = estimator_configs[estimator_name]
@@ -170,34 +179,72 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
                 estimator = estimator_config(2, contamination, parallel)
             elif estimator_name == "iforest_mass" and dataset_name == "two_blobs":
                 estimator = estimator_config(4, contamination, parallel)
+                # estimator = estimator_config(128, contamination, parallel)
             elif estimator_name == "iforest_path" and dataset_name == "two_moons":
                 estimator = estimator_config(16, contamination, parallel)
             elif estimator_name.startswith("iforest_"):
                 estimator = estimator_config(32, contamination, parallel)
             else:
                 estimator = estimator_config(psi, contamination, parallel)
+            # estimator = estimator_config(psi, contamination, parallel)
 
             t0 = time.time()
             y_pred = estimator.fit_predict(
                 X_ if estimator_name in ["iforest_path", "iforest_mass"] else X
+                # X
             )
             t = time.time() - t0
             y_pred = y_pred.astype(np.int64)
-            # y_score = estimator.decision_function(X)
+            y_score = estimator.decision_function(
+                X_ if estimator_name in ["iforest_path", "iforest_mass"] else X
+                # X
+            )
+            roc_auc = roc_auc_score(y_true, y_score)
 
-            plt.subplot(len(dataset_configs), len(estimator_configs), plot_num)
+            ax = plt.subplot(len(dataset_configs), len(estimator_configs), plot_num)
             if i_dataset == 0:
                 plt.title(estimator_name, size=18)
 
             # plot the levels lines and the points
-            Z = estimator.predict(
+            # Z = estimator.predict(
+            #     xxyy_ if estimator_name in ["iforest_path", "iforest_mass"] else xxyy
+            # )
+            # Z = Z.reshape(xx.shape)
+            # plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
+
+            Z = estimator.decision_function(
                 xxyy_ if estimator_name in ["iforest_path", "iforest_mass"] else xxyy
+                # xxyy
             )
             Z = Z.reshape(xx.shape)
-            plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
+            plt.contourf(xx, yy, Z)
+
+            # Z = estimator.decision_function(
+            #     xxyy_ if estimator_name in ["iforest_path", "iforest_mass"] else xxyy
+            # )
+            # Z = Z.reshape(xx.shape)
+            # plt.contour(xx, yy, Z, 3, colors='black')
 
             colors = np.array(["#377eb8", "#ff7f00"])
             plt.scatter(X[:, 0], X[:, 1], s=10, color=colors[(y_pred + 1) // 2])
+            
+            # if hasattr(estimator, 'iforest'):
+            #     r = 0
+            #     for i in estimator.iforest.transformers_:
+            #         s = i.samples_
+            #         plt.scatter(s[:, 0], s[:, 1], s=10)
+            #         boundaries = i.combine_boundaries()
+            #         for i_node in range(boundaries.shape[0]):
+            #             lower = boundaries[i_node, 0, :]
+            #             upper = boundaries[i_node, 1, :]
+            #             rect = patches.Rectangle((lower[0], lower[1]), upper[0]-lower[0], upper[1]-lower[1], linewidth=1, edgecolor='r', facecolor='none')
+            #             # Add the patch to the Axes
+            #             ax.add_patch(rect)
+
+            #         r = r + 1
+            #         if r >= 4:
+            #             break
+
 
             plt.xlim(-7, 7)
             plt.ylim(-7, 7)
