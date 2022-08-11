@@ -2,7 +2,7 @@ from joblib import delayed
 from Common import get_array_module
 from ._outlier_base import BaseAnomalyDetector
 from ._data_dependent import MassEstimator
-from ._constants import INNE
+from ._constants import INNE, FUZZI
 
 
 class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
@@ -29,6 +29,7 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
             anomaly_detection=True,
             **kwargs
         )
+        self.partitioning_type = partitioning_type
         self.mass_based = mass_based
 
     def fit(self, X, y=None):
@@ -37,7 +38,11 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
 
     def score_samples(self, X):
         if self.mass_based:
-            return self.mass_estimator.score(X)
+            mass = self.mass_estimator.score(X)
+            if self.partitioning_type == FUZZI:
+                xp, _ = get_array_module(X)
+                return xp.log(mass)
+            return mass
         else:
             xp, _ = get_array_module(X)
 

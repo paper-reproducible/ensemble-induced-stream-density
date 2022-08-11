@@ -70,5 +70,5 @@ class IsolationForestAnomalyDetector(BaseAnomalyDetector):
             avg_path = xp.average(xp.array(levels), axis=0)
             H = lambda i: xp.log(i) + np.euler_gamma
             c = lambda n: 2 * H(n - 1) - (2 * (n - 1) / n)
-            anomaly_score = 2 ** (0 - (avg_path / c(n)))
+            anomaly_score = 2 ** (avg_path / c(n))
             return anomaly_score

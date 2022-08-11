@@ -69,7 +69,12 @@ class IsolationTree(
         sample_values = xpUtils.unique(m_in[:, split_dim])
         sample_values = xp.sort(sample_values)
         split_pos = xp.random.randint(sample_values.shape[0] - 1)
-        split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
+        # split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
+        split_value = xp.random.uniform(
+            sample_values[split_pos], sample_values[split_pos + 1]
+        )
+        if split_value == sample_values[split_pos + 1]:
+            split_value = split_value - xp.finfo(sample_values.dtype).eps
 
         return False, split_dim, split_value, l_in
 

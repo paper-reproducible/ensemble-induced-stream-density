@@ -25,6 +25,16 @@ from Common import ball_scale
 
 
 dataset_configs = {
+    "demo": {
+        "data": lambda xp=np: (
+            xp.array(
+                [[-5.1, -5.1], [-4.6, -4.6], [-1.1, -1.1], [-0.6, -0.8], [6.6, 6.6]]
+            ),
+            xp.array([1, 1, 1, 1, -1]),
+        ),
+        "contamination": 0.2,
+        "psi": 2,
+    },
     "single_blob": {
         "data": lambda xp=np: load_sklearn_artificial("one_blob", xp),
         "contamination": 0.15,
@@ -190,13 +200,17 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
 
             t0 = time.time()
             y_pred = estimator.fit_predict(
-                X_ if estimator_name in ["iforest_path", "iforest_mass"] else X
+                X_
+                if estimator_name in ["iforest_path", "iforest_mass"]
+                else X
                 # X
             )
             t = time.time() - t0
             y_pred = y_pred.astype(np.int64)
             y_score = estimator.decision_function(
-                X_ if estimator_name in ["iforest_path", "iforest_mass"] else X
+                X_
+                if estimator_name in ["iforest_path", "iforest_mass"]
+                else X
                 # X
             )
             roc_auc = roc_auc_score(y_true, y_score)
@@ -213,7 +227,9 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             # plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
 
             Z = estimator.decision_function(
-                xxyy_ if estimator_name in ["iforest_path", "iforest_mass"] else xxyy
+                xxyy_
+                if estimator_name in ["iforest_path", "iforest_mass"]
+                else xxyy
                 # xxyy
             )
             Z = Z.reshape(xx.shape)
@@ -227,8 +243,9 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
 
             colors = np.array(["#377eb8", "#ff7f00"])
             plt.scatter(X[:, 0], X[:, 1], s=10, color=colors[(y_pred + 1) // 2])
-            
-            # if hasattr(estimator, 'iforest'):
+            # plt.scatter(X[:, 0], X[:, 1], s=10, color="red")
+
+            # if hasattr(estimator, "iforest"):
             #     r = 0
             #     for i in estimator.iforest.transformers_:
             #         s = i.samples_
@@ -237,14 +254,20 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             #         for i_node in range(boundaries.shape[0]):
             #             lower = boundaries[i_node, 0, :]
             #             upper = boundaries[i_node, 1, :]
-            #             rect = patches.Rectangle((lower[0], lower[1]), upper[0]-lower[0], upper[1]-lower[1], linewidth=1, edgecolor='r', facecolor='none')
+            #             rect = patches.Rectangle(
+            #                 (lower[0], lower[1]),
+            #                 upper[0] - lower[0],
+            #                 upper[1] - lower[1],
+            #                 linewidth=1,
+            #                 edgecolor="r",
+            #                 facecolor="none",
+            #             )
             #             # Add the patch to the Axes
             #             ax.add_patch(rect)
 
             #         r = r + 1
             #         if r >= 4:
             #             break
-
 
             plt.xlim(-7, 7)
             plt.ylim(-7, 7)

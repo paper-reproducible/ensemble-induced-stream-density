@@ -20,7 +20,7 @@ from IsolationEstimators import (
 from Data._outliers import load_odds, load_sklearn_real, load_sklearn_artificial
 
 
-def estimator(name, psi, t=1000, parallel=None):
+def estimator(name, psi, t=100, parallel=None):
     if name == "fuzzi_mass":
         return lambda: IsolationBasedAnomalyDetector(
             psi,
@@ -86,6 +86,7 @@ def estimator(name, psi, t=1000, parallel=None):
             psi,
             t,
             mass_based=True,
+            rotation=True,
             partitioning_type="soft_anne",
             parallel=parallel,
         )
@@ -94,6 +95,7 @@ def estimator(name, psi, t=1000, parallel=None):
             psi,
             t,
             mass_based=False,
+            rotation=True,
             partitioning_type="soft_anne",
             parallel=parallel,
         )
@@ -135,7 +137,7 @@ def pred_eval_params(
     X,
     y_true,
     psi_values=[],
-    t=1000,
+    t=100,
     contamination="auto",
     n_rounds=10,
     parallel=None,
@@ -217,7 +219,7 @@ def find_best_psi_by_roc_auc(evaluate_results):
     return psi_map
 
 
-def pred_eval(dataset_name, folder="./Data", t=1000, xp=np, parallel=None, debug=False):
+def pred_eval(dataset_name, folder="./Data", t=100, xp=np, parallel=None, debug=False):
     print(" Evaluating dataset " + dataset_name + ":")
     config = dataset_configs[dataset_name]
     X, y = config["data"](xp)
@@ -260,7 +262,7 @@ def pred_eval(dataset_name, folder="./Data", t=1000, xp=np, parallel=None, debug
 
 
 def main(
-    t=1000,
+    t=128,
     folder="./Data",
     use_tensorflow=False,
     use_cupy=False,
