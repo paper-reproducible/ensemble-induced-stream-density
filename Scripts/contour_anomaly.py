@@ -226,14 +226,15 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             # Z = Z.reshape(xx.shape)
             # plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
 
-            Z = estimator.decision_function(
-                xxyy_
-                if estimator_name in ["iforest_path", "iforest_mass"]
-                else xxyy
-                # xxyy
-            )
             if estimator_name == "fuzzi_mass":
-                Z = np.log(Z)
+                Z = np.log(estimator.score_samples(xxyy))
+            else:
+                Z = estimator.decision_function(
+                    xxyy_
+                    if estimator_name in ["iforest_path", "iforest_mass"]
+                    else xxyy
+                    # xxyy
+                )
             Z = Z.reshape(xx.shape)
             plt.contourf(xx, yy, Z)
 
