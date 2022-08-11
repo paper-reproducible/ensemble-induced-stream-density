@@ -211,13 +211,14 @@ class AdaptiveMassEstimationTree(IsolationTree, DensityMixin):
         self.node_mass_ = self.node_mass_ + l_volumes_diff * rho_drop
         return self
 
-    def score(self, X, y=None, return_demass=True):
+    def score(self, X, y=None, return_demass=False):
         xp, _ = get_array_module(X)
+        eps = xp.finfo(X.dtype).eps
         indices = super().transform(X)[:, 0]
         l_leaf_mass = self.node_mass_[self.node_is_leaf_]
         if return_demass:
             l_leaf_volumes = self.node_volumes_[self.node_is_leaf_]
-            l_leaf_demass = l_leaf_mass / l_leaf_volumes
+            l_leaf_demass = (l_leaf_mass+eps) / (l_leaf_volumes+eps)
             return xp.take(l_leaf_demass, indices)
         else:
             return xp.take(l_leaf_mass, indices)

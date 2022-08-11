@@ -232,6 +232,8 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
                 else xxyy
                 # xxyy
             )
+            if estimator_name == "fuzzi_mass":
+                Z = np.log(Z)
             Z = Z.reshape(xx.shape)
             plt.contourf(xx, yy, Z)
 
@@ -283,4 +285,4 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             )
             plot_num += 1
         i_dataset += 1
-    plt.show()
+plt.show()

@@ -267,7 +267,7 @@ def main(
     use_tensorflow=False,
     use_cupy=False,
     debug=False,
-    time_format="%Y%m%d%H%M%S",
+    time_format="%Y%m%d%H",
 ):
     np.set_printoptions(precision=4, suppress=True, linewidth=150)
     xp = init_xp(use_tensorflow, use_cupy)
@@ -288,7 +288,10 @@ def main(
             if debug:
                 print(evaluate_results_to_df(evaluate_results))
     df_all_evaluate_results = evaluate_results_to_df(all_evaluate_results)
-    save_csv(df_all_evaluate_results, folder + "/anomaly_metric")
+    save_csv(
+        df_all_evaluate_results,
+        folder + "/anomaly_metric_" + datetime.now().strftime("%Y%m%d%H%M%S"),
+    )
     return
 
 
@@ -411,7 +414,7 @@ dataset_configs = {
     },
     "two_moons": {
         "data": lambda xp: load_sklearn_artificial("two_moons", xp),
-        "contamination": 45.0/345.0,
+        "contamination": 45.0 / 345.0,
         "psi_values": [2, 4, 8, 16, 32],
     },
 }

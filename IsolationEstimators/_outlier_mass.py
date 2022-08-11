@@ -39,9 +39,10 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
     def score_samples(self, X):
         if self.mass_based:
             mass = self.mass_estimator.score(X)
-            if self.partitioning_type == FUZZI:
-                xp, _ = get_array_module(X)
-                return xp.log(mass)
+            # if self.partitioning_type == FUZZI:
+            #     xp, _ = get_array_module(mass)
+            #     eps = xp.finfo(mass.dtype).eps
+            #     return xp.log(mass + eps)
             return mass
         else:
             xp, _ = get_array_module(X)
