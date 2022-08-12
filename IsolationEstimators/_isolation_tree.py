@@ -78,7 +78,7 @@ class IsolationTree(
         l_max = xp.max(m_in, axis=0)
 
         l_dims = xp.where(l_min + (2 * eps) <= l_max)[0]
-        split_dim = xp.random.randint(l_dims.shape[0])
+        split_dim = xp.random.randint(low=0, high=l_dims.shape[0])
         split_dim = l_dims[split_dim]
 
         split_value = xp.random.uniform(l_min[split_dim], l_max[split_dim])
