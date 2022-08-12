@@ -11,7 +11,21 @@ from Common import get_array_module
 from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
 
 
-class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
+class DataDependentEstimator(BaseAdaptiveBaggingEstimator):
+    def fit(self, X, y=None):
+        def single_fit(bagger, X):
+            e = bagger.transformer_factory()
+            e.fit(X)
+            return e
+
+        self.transformers_ = self.parallel()(
+            delayed(single_fit)(self, X) for _ in range(self.t)
+        )
+        self.fitted = X.shape[0]
+        return self
+
+
+class IsolationTransformer(DataDependentEstimator, TransformerMixin):
     def __init__(
         self,
         psi,
@@ -77,7 +91,7 @@ class IsolationTransformer(BaseAdaptiveBaggingEstimator, TransformerMixin):
             return xpUtils.hstack(all_results)
 
 
-class IncrementalMassEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
+class IncrementalMassEstimator(DataDependentEstimator, DensityMixin):
     def __init__(
         self,
         psi,

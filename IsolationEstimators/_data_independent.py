@@ -11,10 +11,23 @@ from Common import get_array_module, ball_samples
 from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
 
 
-def _single_fit(transformer, X):
-    dims = X.shape[1]
+def _single_fit(bagger, X):
+    transformer = bagger.transformer_factory()
+    n, dims = X.shape
     xp, xpUtils = get_array_module(X)
-    samples = ball_samples(transformer.psi, dims, xp=xp, linalg=xpUtils)
+    samples = None
+    if isinstance(transformer, IsolationTree):
+        if transformer.rotation:
+            samples = ball_samples(transformer.psi, dims, xp=xp, linalg=xpUtils)
+        elif transformer.global_boundaries is not None:
+            global_lower_boundary, global_upper_boundary = transformer.global_boundaries
+            samples = xp.random.uniform(
+                low=global_lower_boundary, high=global_upper_boundary, size=(n, dims)
+            )
+    if samples is None:
+        samples = xp.random.uniform(
+            low=X.min(axis=0), high=X.max(axis=0), size=(n, dims)
+        )
     transformer.fit(samples)
     indices = transformer.transform(X)
     transformer.region_mass_ = xp.sum(
@@ -85,7 +98,7 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
             raise NotImplementedError("The data need to be ball_scale-ed")
 
         self.transformers_ = self.parallel()(
-            delayed(_single_fit)(i, X) for i in self.transformers_
+            delayed(_single_fit)(self, X) for _ in range(self.t)
         )
 
         self.fitted = X.shape[0]

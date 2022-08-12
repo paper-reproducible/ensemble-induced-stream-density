@@ -1,16 +1,18 @@
 import numpy as np
+from Common import get_array_module
 from ._stream import ProbabilityStream
 
 
 def ringnd(X, args):  # when radius=0 this is a gaussian
+    xp, _ = get_array_module(X)
     # print(args)
     radius = args["radius"]
     bw = args["bandwidth"]
-    o = args["center"]
+    o = xp.array(args["center"])
     w = args["weight"]
-    r = np.sum((X - o) ** 2, axis=1, keepdims=True) ** 0.5
-    p = np.exp(-np.power(r - radius, 2.0) / (2 * np.power(bw, 2.0))) * w
-    return np.squeeze(p)
+    r = xp.sum((X - o) ** 2, axis=1, keepdims=True) ** 0.5
+    p = xp.exp(-xp.power(r - radius, 2.0) / (2 * xp.power(bw, 2.0))) * w
+    return xp.squeeze(p)
 
 
 def gaussian2x2(stream=None):

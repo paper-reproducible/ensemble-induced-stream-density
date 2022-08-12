@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from sklearn.base import BaseEstimator, clone
 from joblib import Parallel, delayed
 from Common import get_array_module
@@ -21,10 +22,10 @@ class BaseBaggingEstimator(BaseEstimator):
         else:
             return self.preset_parallel
 
+    @abstractmethod
     def fit(self, X, y=None):
         def single_fit(bagger, X):
             e = bagger.transformer_factory()
-            e.fit(X)
             return e
 
         self.transformers_ = self.parallel()(

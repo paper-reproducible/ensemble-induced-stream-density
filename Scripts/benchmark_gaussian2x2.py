@@ -184,11 +184,11 @@ def benchmark_total(X, estimators, stream: ProbabilityStream):
 
 
 def benchmark_gaussian2x2():
-    with Parallel(n_jobs=32, backend="loky") as parallel:
+    # with Parallel(n_jobs=32, backend="loky") as parallel:
     # with Parallel(n_jobs=32, backend="multiprocessing") as parallel:
     # with Parallel(n_jobs=32, backend="threading") as parallel:
     # with Parallel(n_jobs=1, prefer="threads") as parallel:
-    # with Parallel(n_jobs=32, prefer="threads") as parallel:
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
     # with Parallel(n_jobs=32, prefer="processes") as parallel:
 
         stream = None
