@@ -82,10 +82,11 @@ def brother(l_parents, i_node):
     return l_brothers[l_brothers != i_node][0]
 
 
+ROOT_LEVEL = 0
 NO_PARENT = -1
 NO_SPLIT_DIM = -1
-NO_SPLIT_VALUE = None
-ROOT_LEVEL = 0
+# NO_SPLIT_VALUE should never be used for comparison.
+NO_SPLIT_VALUE = np.finfo(float).min
 
 
 class AxisParallelBinaryTree:
