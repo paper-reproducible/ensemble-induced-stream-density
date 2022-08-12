@@ -56,6 +56,8 @@ def estimator(name, psi, t=100, parallel=None):
             psi,
             t,
             mass_based=False,
+            # rotation=False,
+            rotation=True,
             parallel=parallel,
         )
     if name == "iforest_mass":
@@ -63,6 +65,8 @@ def estimator(name, psi, t=100, parallel=None):
             psi,
             t,
             mass_based=True,
+            # rotation=False,
+            rotation=True,
             parallel=parallel,
         )
     if name == "anne_mass":
@@ -350,7 +354,7 @@ dataset_configs = {
             xp.array([1, 1, 1, 1, -1]),
         ),
         "contamination": 0.2,
-        "psi_values": [2],
+        "psi_values": [2, 3, 4],
     },
     "http": {
         "data": lambda xp: load_sklearn_real("http", xp),

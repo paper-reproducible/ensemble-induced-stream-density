@@ -178,25 +178,36 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
 
         for estimator_name in estimator_configs:
             estimator_config = estimator_configs[estimator_name]
+            estimator = None
 
-            if (
-                estimator_name == "iforest_sklearn" or estimator_name == "iforest_mass"
-            ) and dataset_name == "single_blob":
-                estimator = estimator_config(2, contamination, parallel)
-            elif estimator_name == "iforest_path" and (
-                dataset_name == "two_blobs" or dataset_name == "imba_blobs"
-            ):
-                estimator = estimator_config(2, contamination, parallel)
-            elif estimator_name == "iforest_mass" and dataset_name == "two_blobs":
-                estimator = estimator_config(4, contamination, parallel)
-                # estimator = estimator_config(128, contamination, parallel)
-            elif estimator_name == "iforest_path" and dataset_name == "two_moons":
-                estimator = estimator_config(16, contamination, parallel)
-            elif estimator_name.startswith("iforest_"):
-                estimator = estimator_config(32, contamination, parallel)
-            else:
+            if estimator_name.startswith("iforest_"):
+                if dataset_name == "single_blog":
+                    if estimator_name == "iforest_mass":
+                        estimator = estimator_config(2, contamination, parallel)
+                    elif estimator_name == "iforest_path":
+                        estimator = estimator_config(32, contamination, parallel)
+                elif dataset_name == "two_blobs":
+                    if estimator_name == "iforest_mass":
+                        estimator = estimator_config(4, contamination, parallel)
+                    elif estimator_name == "iforest_path":
+                        estimator = estimator_config(32, contamination, parallel)
+                elif dataset_name == "imba_blobs":
+                    if estimator_name == "iforest_mass":
+                        estimator = estimator_config(2, contamination, parallel)
+                    elif estimator_name == "iforest_path":
+                        estimator = estimator_config(32, contamination, parallel)
+                elif dataset_name == "two_moons":
+                    if estimator_name == "iforest_mass":
+                        estimator = estimator_config(2, contamination, parallel)
+                    elif estimator_name == "iforest_path":
+                        estimator = estimator_config(32, contamination, parallel)
+                elif dataset_name == "demo":
+                    estimator = estimator_config(4, contamination, parallel)
+                else:
+                    estimator = estimator_config(32, contamination, parallel)
+
+            if estimator is None:
                 estimator = estimator_config(psi, contamination, parallel)
-            # estimator = estimator_config(psi, contamination, parallel)
 
             t0 = time.time()
             y_pred = estimator.fit_predict(
