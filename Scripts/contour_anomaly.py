@@ -66,12 +66,12 @@ _t = 100
 _n_jobs = 32
 
 estimator_configs = {
-    "fuzzi_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+    "isotropic_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
         psi,
         t=_t,
         contamination=contamination,
         mass_based=True,
-        partitioning_type="fuzzi",
+        isolation_model="isotropic",
         parallel=parallel,
     ),
     "inne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -79,7 +79,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=True,
-        partitioning_type="inne",
+        isolation_model="inne",
         parallel=parallel,
     ),
     "inne_ratio": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -87,7 +87,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=False,
-        partitioning_type="inne",
+        isolation_model="inne",
         parallel=parallel,
     ),
     "anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -95,7 +95,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=True,
-        partitioning_type="anne",
+        isolation_model="anne",
         parallel=parallel,
     ),
     "anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -103,7 +103,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=False,
-        partitioning_type="anne",
+        isolation_model="anne",
         parallel=parallel,
     ),
     "soft_anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -111,7 +111,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=True,
-        partitioning_type="soft_anne",
+        isolation_model="soft_anne",
         parallel=parallel,
     ),
     "soft_anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -119,7 +119,7 @@ estimator_configs = {
         t=_t,
         contamination=contamination,
         mass_based=False,
-        partitioning_type="soft_anne",
+        isolation_model="soft_anne",
         parallel=parallel,
     ),
     "iforest_sklearn": lambda psi, contamination, parallel: IsolationForest(
@@ -237,7 +237,7 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             # Z = Z.reshape(xx.shape)
             # plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
 
-            if estimator_name == "fuzzi_mass":
+            if estimator_name == "isotropic_mass":
                 Z = np.log(estimator.score_samples(xxyy))
             else:
                 Z = estimator.decision_function(

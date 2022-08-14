@@ -3,16 +3,12 @@ from sklearn.base import DensityMixin
 from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
 from ._isolation_tree import IsolationTree
-from ._voronoi import VoronoiPartitioning
-from ._voronoi_soft import SoftVoronoiPartitioning
-from ._fuzzy import FuzziPartitioning
-from ._inn import INNPartitioning
 from Common import get_array_module, ball_samples
-from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
+from ._naming import IsolationModel, get_partitioning_initializer
 
 
 def _single_fit(bagger, X):
-    transformer = bagger.transformer_factory()
+    transformer = bagger.partitioning_initializer()
     n, dims = X.shape
     xp, xpUtils = get_array_module(X)
     samples = None
@@ -47,12 +43,12 @@ def _single_partial_fit(transformer, X):
     return transformer
 
 
-def _single_score(partitioning_type, transformer, X, return_demass):
+def _single_score(isolation_model, transformer, X, return_demass):
     xp, xpUtils = get_array_module(X)
     region_mass = transformer.region_mass_
     indices = transformer.transform(X)
     if return_demass:
-        if partitioning_type == IFOREST:
+        if isolation_model == IsolationModel.IFOREST.value:
             region_volumes = transformer.node_volumes_[transformer.node_is_leaf_]
         else:
             # Never gonna happen
@@ -70,27 +66,18 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         self,
         psi,
         t,
-        partitioning_type=IFOREST,
+        isolation_model=IsolationModel.IFOREST.value,
         n_jobs=16,
         verbose=0,
         parallel=None,
         **kwargs
     ):
-        if partitioning_type == IFOREST:
-            transformer_factory = lambda: IsolationTree(psi, **kwargs)
-        elif partitioning_type == ANNE:
-            transformer_factory = lambda: VoronoiPartitioning(psi, **kwargs)
-        elif partitioning_type == FUZZI:
-            transformer_factory = lambda: FuzziPartitioning(psi, **kwargs)
-        elif partitioning_type == INNE:
-            transformer_factory = lambda: INNPartitioning(psi, **kwargs)
-        elif partitioning_type == SOFT_ANNE:
-            transformer_factory = lambda: SoftVoronoiPartitioning(psi, **kwargs)
-        else:
-            raise NotImplementedError()
-        super().__init__(transformer_factory, t, n_jobs, verbose, parallel)
+        partitioning_initializer = get_partitioning_initializer(
+            isolation_model, psi, **kwargs
+        )
+        super().__init__(partitioning_initializer, t, n_jobs, verbose, parallel)
         self.psi = psi
-        self.partitioning_type = partitioning_type
+        self.isolation_model = isolation_model
 
     def fit(self, X, y=None):
         xp, xpUtils = get_array_module(X)
@@ -124,11 +111,11 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
         if xp.any(xpUtils.norm(X, axis=1) > 1):
             raise NotImplementedError("The data need to be ball_scale-ed")
 
-        if return_demass and self.partitioning_type != IFOREST:
+        if return_demass and self.isolation_model != IsolationModel.IFOREST.value:
             return NotImplementedError()
 
         all_results = self.parallel()(
-            delayed(_single_score)(self.partitioning_type, i, X, return_demass)
+            delayed(_single_score)(self.isolation_model, i, X, return_demass)
             for i in self.transformers_
         )
         return xp.average(xp.array(all_results), axis=0)
@@ -136,11 +123,17 @@ class DataIndependentEstimator(BaseAdaptiveBaggingEstimator, DensityMixin):
 
 class DataIndependentDensityEstimator(DataIndependentEstimator):
     def __init__(
-        self, psi, t, partitioning_type=IFOREST, n_jobs=16, verbose=0, parallel=None
+        self,
+        psi,
+        t,
+        isolation_model=IsolationModel.IFOREST.value,
+        n_jobs=16,
+        verbose=0,
+        parallel=None,
     ):
-        if partitioning_type != IFOREST:
+        if isolation_model != IsolationModel.IFOREST.value:
             raise NotImplementedError()
-        super().__init__(psi, t, partitioning_type, n_jobs, verbose, parallel)
+        super().__init__(psi, t, isolation_model, n_jobs, verbose, parallel)
 
     def score(self, X):
         return super().score(X, return_demass=True)

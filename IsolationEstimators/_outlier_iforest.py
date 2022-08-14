@@ -3,8 +3,8 @@ from joblib import delayed
 from Common import get_array_module
 from ._outlier_base import BaseAnomalyDetector
 from ._data_dependent import IncrementalMassEstimator, IsolationTransformer
-from ._constants import IFOREST
 from ._isolation_tree import IsolationTree
+from ._naming import IsolationModel, get_partitioning_initializer
 
 
 class IsolationForestAnomalyDetector(BaseAnomalyDetector):
@@ -24,7 +24,7 @@ class IsolationForestAnomalyDetector(BaseAnomalyDetector):
             self.iforest = IncrementalMassEstimator(
                 psi,
                 t,
-                partitioning_type=IFOREST,
+                isolation_model=IsolationModel.IFOREST.value,
                 n_jobs=n_jobs,
                 verbose=verbose,
                 parallel=parallel,
@@ -34,7 +34,7 @@ class IsolationForestAnomalyDetector(BaseAnomalyDetector):
             self.iforest = IsolationTransformer(
                 psi,
                 t,
-                partitioning_type=IFOREST,
+                isolation_model=IsolationModel.IFOREST.value,
                 n_jobs=n_jobs,
                 verbose=verbose,
                 parallel=parallel,

@@ -6,13 +6,13 @@ from Common import get_array_module
 
 class BaseBaggingEstimator(BaseEstimator):
     def __init__(
-        self, transformer_factory, t, n_jobs=16, verbose=0, parallel=None, **kwargs
+        self, partitioning_initializer, t, n_jobs=16, verbose=0, parallel=None, **kwargs
     ):
-        self.transformer_factory = transformer_factory
+        self.partitioning_initializer = partitioning_initializer
         self.t = t
         self.n_jobs = n_jobs
         self.verbose = verbose
-        # self.transformers_ = [transformer_factory() for _ in range(t)]
+        # self.transformers_ = [partitioning_initializer() for _ in range(t)]
         self.fitted = 0
         self.preset_parallel = parallel
 
@@ -25,7 +25,7 @@ class BaseBaggingEstimator(BaseEstimator):
     @abstractmethod
     def fit(self, X, y=None):
         def single_fit(bagger, X):
-            e = bagger.transformer_factory()
+            e = bagger.partitioning_initializer()
             return e
 
         self.transformers_ = self.parallel()(

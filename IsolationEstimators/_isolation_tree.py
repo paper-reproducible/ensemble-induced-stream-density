@@ -10,6 +10,7 @@ from ._binary_tree import AxisParallelBinaryTree
 
 def get_boundaries(X, ball_scaled=True):
     xp, _ = get_array_module(X)
+    eps = xp.finfo(X.dtype).eps
     X_min = X.min(axis=0)
     X_max = X.max(axis=0)
     select_dims = xp.where(X_min < X_max)[0]
@@ -19,7 +20,8 @@ def get_boundaries(X, ball_scaled=True):
         global_lower_boundary = 0 - global_upper_boundary
     else:
         global_lower_boundary = xp.expand_dims(X_min[select_dims], axis=0)
-        global_upper_boundary = xp.expand_dims(X_max[select_dims], axis=0)
+        global_upper_boundary = xp.expand_dims(X_max[select_dims] + (eps * 2), axis=0)
+        # Only adding 1 eps does not change the comparison result.
 
     return global_lower_boundary, global_upper_boundary, select_dims
 

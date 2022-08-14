@@ -2,19 +2,15 @@ import numpy as np
 from sklearn.base import TransformerMixin, DensityMixin
 from joblib import delayed
 from ._bagging import BaseAdaptiveBaggingEstimator
-from ._voronoi import VoronoiPartitioning
-from ._voronoi_soft import SoftVoronoiPartitioning
-from ._isolation_tree import IsolationTree, AdaptiveMassEstimationTree
-from ._fuzzy import FuzziPartitioning
-from ._inn import INNPartitioning
+from ._isolation_tree import AdaptiveMassEstimationTree
 from Common import get_array_module
-from ._constants import ANNE, IFOREST, FUZZI, INNE, SOFT_ANNE
+from ._naming import IsolationModel, get_partitioning_initializer
 
 
 class DataDependentEstimator(BaseAdaptiveBaggingEstimator):
     def fit(self, X, y=None):
         def single_fit(bagger, X):
-            e = bagger.transformer_factory()
+            e = bagger.partitioning_initializer()
             e.fit(X)
             return e
 
@@ -30,27 +26,18 @@ class IsolationTransformer(DataDependentEstimator, TransformerMixin):
         self,
         psi,
         t,
-        partitioning_type=IFOREST,
+        isolation_model=IsolationModel.IFOREST.value,
         n_jobs=16,
         verbose=0,
         parallel=None,
         **kwargs
     ):
-        if partitioning_type == ANNE:
-            transformer_factory = lambda: VoronoiPartitioning(psi, **kwargs)
-        elif partitioning_type == IFOREST:
-            transformer_factory = lambda: IsolationTree(psi, **kwargs)
-        elif partitioning_type == FUZZI:
-            transformer_factory = lambda: FuzziPartitioning(psi, **kwargs)
-        elif partitioning_type == INNE:
-            transformer_factory = lambda: INNPartitioning(psi, **kwargs)
-        elif partitioning_type == SOFT_ANNE:
-            transformer_factory = lambda: SoftVoronoiPartitioning(psi, **kwargs)
-        else:
-            raise NotImplementedError()
-        super().__init__(transformer_factory, t, n_jobs, verbose, parallel)
+        partitioning_initializer = get_partitioning_initializer(
+            isolation_model, psi, **kwargs
+        )
+        super().__init__(partitioning_initializer, t, n_jobs, verbose, parallel)
         self.psi = psi
-        self.partitioning_type = partitioning_type
+        self.isolation_model = isolation_model
 
     def transform(self, X, return_similarity=False):
         xp, xpUtils = get_array_module(X)
@@ -92,21 +79,12 @@ class IsolationTransformer(DataDependentEstimator, TransformerMixin):
 
 
 class IncrementalMassEstimator(DataDependentEstimator, DensityMixin):
-    def __init__(
-        self,
-        psi,
-        t,
-        partitioning_type=IFOREST,
-        n_jobs=16,
-        verbose=0,
-        parallel=None,
-        **kwargs
-    ):
-        if partitioning_type == IFOREST:
-            transformer_factory = lambda: AdaptiveMassEstimationTree(psi, **kwargs)
-        else:  # aNNE and other partitionings are not adaptive
-            raise NotImplementedError()
-        super().__init__(transformer_factory, t, n_jobs, verbose, parallel, **kwargs)
+    def __init__(self, psi, t, n_jobs=16, verbose=0, parallel=None, **kwargs):
+        partitioning_initializer = lambda: AdaptiveMassEstimationTree(psi, **kwargs)
+
+        super().__init__(
+            partitioning_initializer, t, n_jobs, verbose, parallel, **kwargs
+        )
         self.psi = psi
 
     def score(self, X, return_demass=False):
@@ -125,17 +103,8 @@ class IncrementalMassEstimator(DataDependentEstimator, DensityMixin):
 
 
 class DEMassEstimator(IncrementalMassEstimator):
-    def __init__(
-        self,
-        psi,
-        t,
-        partitioning_type=IFOREST,
-        n_jobs=16,
-        verbose=0,
-        parallel=None,
-        **kwargs
-    ):
-        super().__init__(psi, t, partitioning_type, n_jobs, verbose, parallel, **kwargs)
+    def __init__(self, psi, t, n_jobs=16, verbose=0, parallel=None, **kwargs):
+        super().__init__(psi, t, n_jobs, verbose, parallel, **kwargs)
 
     def score(self, X):
         return super().score(X, return_demass=True)

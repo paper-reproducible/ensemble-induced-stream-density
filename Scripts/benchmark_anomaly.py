@@ -13,96 +13,32 @@ from Common import (
     save_parquet,
     init_xp,
 )
-from IsolationEstimators import (
-    IsolationBasedAnomalyDetector,
-    IsolationForestAnomalyDetector,
-)
 from Data._outliers import load_odds, load_sklearn_real, load_sklearn_artificial
+from IsolationEstimators._naming import EstimatorType
+from IsolationEstimators._estimators import init_estimator
 
 
 def estimator(name, psi, t=100, parallel=None):
-    if name == "fuzzi_mass":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=True,
-            partitioning_type="fuzzi",
-            parallel=parallel,
-        )
-    if name == "inne_mass":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=True,
-            partitioning_type="inne",
-            parallel=parallel,
-        )
-    if name == "inne_ratio":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=False,
-            partitioning_type="inne",
-            parallel=parallel,
-        )
     if name == "iforest_sklearn":
         return lambda: IsolationForest(
             max_samples=psi,
             n_estimators=t,
             n_jobs=32,
         )
-    if name == "iforest_path":
-        return lambda: IsolationForestAnomalyDetector(
-            psi,
-            t,
-            mass_based=False,
-            # rotation=False,
-            rotation=True,
-            parallel=parallel,
-        )
-    if name == "iforest_mass":
-        return lambda: IsolationForestAnomalyDetector(
-            psi,
-            t,
-            mass_based=True,
-            # rotation=False,
-            rotation=True,
-            parallel=parallel,
-        )
-    if name == "anne_mass":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=True,
-            partitioning_type="anne",
-            parallel=parallel,
-        )
-    if name == "anne_dis":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=False,
-            partitioning_type="anne",
-            parallel=parallel,
-        )
-    if name == "soft_anne_mass":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=True,
-            rotation=True,
-            partitioning_type="soft_anne",
-            parallel=parallel,
-        )
-    if name == "soft_anne_dis":
-        return lambda: IsolationBasedAnomalyDetector(
-            psi,
-            t,
-            mass_based=False,
-            rotation=True,
-            partitioning_type="soft_anne",
-            parallel=parallel,
-        )
+
+    splits = name.split("_")
+    model = "_".join(splits[:-1])
+    mass_based = splits[len(splits) - 1] == "mass"
+    return lambda: init_estimator(
+        EstimatorType.ANOMALY,
+        model,
+        psi,
+        t,
+        data_dependent=True,
+        mass_based=mass_based,
+        rotation=True,
+        parallel=parallel,
+    )
 
 
 def predict_once(e, X, contamination="auto"):
@@ -335,7 +271,7 @@ def plot_roc(
 
 
 estimator_names = [
-    "fuzzi_mass",
+    "isotropic_mass",
     "soft_anne_mass",
     "soft_anne_dis",
     "inne_mass",
