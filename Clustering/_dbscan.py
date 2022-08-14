@@ -1,14 +1,6 @@
-from opcode import hasconst
 import numpy as np
 from Common import get_array_module
 from scipy.sparse.csgraph import connected_components
-from IsolationEstimators import (
-    MassEstimator,
-    DEMassEstimator,
-    IsolationTransformer,
-    IsolationForestAnomalyDetector,
-    IsolationBasedAnomalyDetector,
-)
 
 
 def _adj(m_sim, eps, using_similarity=False):
@@ -68,9 +60,7 @@ def dbscan(m_dis, eps, minPts):
 
 
 from sklearn.base import BaseEstimator, ClusterMixin
-from IsolationEstimators import IsolationTransformer, MassEstimator
-from IsolationEstimators._naming import EstimatorType, IsolationModel
-from IsolationEstimators._estimators import init_estimator
+from IsolationEstimators import EstimatorType, IsolationModel, init_estimator
 
 
 class DBSCAN(BaseEstimator, ClusterMixin):
@@ -203,8 +193,8 @@ if __name__ == "__main__":
         "iforest_similarity": (0.8, 2, 2),
         "anne_anomaly": (0.8, -3, 2),
         "soft_anne_anomaly": (0.8, -3, 2),
-        "inne_anomaly": (0.8, -0.5, 2),
-        "iforest_anomaly": (1, 1.6, 3),
+        "inne_anomaly": (0.8, -0.4, 2),
+        "iforest_anomaly": (1, 1.59, 3),
         "anne_mass": (0.8, 2.5, 2),
         "soft_anne_mass": (0.8, 2.5, 2),
         "inne_mass": (1, 1, 2),
