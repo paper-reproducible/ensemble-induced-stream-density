@@ -15,6 +15,11 @@ def _dens(m_adj, xp=np):
     return xp.sum(m_adj, axis=1)
 
 
+def epsilon_neighbourhood_density(m_sim, eps, using_similarity=False, xp=np):
+    m_adj = _adj(m_sim, eps, using_similarity)
+    return _dens(m_adj, xp)
+
+
 def _dbscan(m_sim, eps, threshold, l_dens=None, using_similarity=False):
     xp, xpUtils = get_array_module(m_sim)
     n = m_sim.shape[0]
@@ -68,6 +73,7 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         self,
         eps,
         core_threshold,
+        psi,
         isolation_model_name=None,
         use_alpha_neighbourhood_mass=True,
         use_anomaly_score=False,
@@ -106,25 +112,14 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         self.X_ = None
         return
 
-    def partial_fit(self, X, y=None):
-        xp, xpUtils = get_array_module(X)
-        self.X_ = xp.concatenate([self.X_, X], axis=0)
-        if self.isolation_model is not None:
-            self.isolation_model.partial_fit(xpUtils.cast(X, dtype=self.dtype))
-        return self
-
     def fit(self, X, y=None):
-        _, xpUtils = get_array_module(X)
+        xp, xpUtils = get_array_module(X)
         self.X_ = xpUtils.cast(X, dtype=self.dtype)
+
+        # The similarity matrix and density are calculated for tunning purpose.
         if self.isolation_model is not None:
-            self.isolation_model.fit(xpUtils.cast(X, dtype=self.dtype))
-        return self
+            self.isolation_model.fit(self.X_)
 
-    def predict(self, X, y=None):
-        if X is not None:
-            raise NotImplementedError()
-
-        xp, xpUtils = get_array_module(self.X_)
         using_similarity = (
             self.isolation_model is not None and self.use_alpha_neighbourhood_mass
         )
@@ -147,11 +142,22 @@ class DBSCAN(BaseEstimator, ClusterMixin):
         else:
             l_dens = None
 
-        y, _ = _dbscan(m_sim, self.eps, self.core_threshold, l_dens, using_similarity)
-
-        # for debug purpose
+        self.using_similarity = using_similarity
         self.m_sim = m_sim
         self.l_dens = l_dens
+        return self
+
+    def predict(self, X, y=None):
+        xp, _ = get_array_module(self.X_)
+        if X is not None and xp.any(self.X_ != X):
+            raise NotImplementedError()
+
+        using_similarity = (
+            self.isolation_model is not None and self.use_alpha_neighbourhood_mass
+        )
+        y, _ = _dbscan(
+            self.m_sim, self.eps, self.core_threshold, self.l_dens, using_similarity
+        )
         return y
 
     def fit_predict(self, X, y=None):
@@ -162,14 +168,15 @@ if __name__ == "__main__":
     from Common import ball_scale
 
     np.set_printoptions(precision=4, suppress=True, linewidth=150)
+    xp = np
+
+    # import os
     # import tensorflow as tf
 
     # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "5"
     # tnp = tf.experimental.numpy
     # tnp.experimental_enable_numpy_behavior()
-
     # xp = tnp
-    xp = np
 
     X = xp.array(
         [[-5.1, -5.1], [-4.6, -4.6], [-1.1, -1.1], [-0.6, -0.8], [6.6, 6.6]],
@@ -189,7 +196,7 @@ if __name__ == "__main__":
         "anne_similarity": (0.8, 2, 2),
         "soft_anne_similarity": (0.8, 2, 2),
         "inne_similarity": (0.2, 2, 2),
-        "isotropic_similarity": (0.001, 2, 2),
+        "isotropic_similarity": (0.1, 2, 2),
         "iforest_similarity": (0.8, 2, 2),
         "anne_anomaly": (0.8, -3, 2),
         "soft_anne_anomaly": (0.8, -3, 2),
@@ -198,7 +205,7 @@ if __name__ == "__main__":
         "anne_mass": (0.8, 2.5, 2),
         "soft_anne_mass": (0.8, 2.5, 2),
         "inne_mass": (1, 1, 2),
-        "isotropic_mass": (1, 0.09, 3),
+        "isotropic_mass": (1, 2, 3),
         "iforest_mass": (1, 2.5, 2),
     }
     # isotropic_anomaly does not exist.
@@ -226,6 +233,7 @@ if __name__ == "__main__":
                 m = DBSCAN(
                     eps,
                     minPts,
+                    psi,
                     isolation_model_name=None if model_name == "l2" else model_name,
                     use_alpha_neighbourhood_mass=True,
                     rotation=rotation,
@@ -249,7 +257,8 @@ if __name__ == "__main__":
                 m = DBSCAN(
                     eps,
                     minPts,
-                    model_name,
+                    psi,
+                    isolation_model_name=model_name,
                     use_alpha_neighbourhood_mass=False,
                     use_anomaly_score=True,
                     rotation=rotation,
@@ -264,7 +273,8 @@ if __name__ == "__main__":
                 m = DBSCAN(
                     eps,
                     minPts,
-                    model_name,
+                    psi,
+                    isolation_model_name=model_name,
                     use_alpha_neighbourhood_mass=False,
                     use_anomaly_score=False,
                     rotation=rotation,

@@ -13,7 +13,7 @@ def _batch_gaussian(X, locs, scales):
     scales = xp.expand_dims(scales, axis=0)
     p = xpUtils.pdist(X, locs, root=False)  # [n, psi]
     p = xp.exp(p / (0 - 2 * (scales**2)))
-    p = p / scales / xp.sqrt((np.pi * 2) ** dims)
+    p = p / scales  # / xp.sqrt((np.pi * 2) ** dims)
     return p
 
 
