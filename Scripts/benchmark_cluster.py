@@ -107,7 +107,39 @@ estimator_configs = {
 }
 
 data_dir = "Data/mat/clusters"
-datasets = [f[: (len(f) - 4)] for f in os.listdir(data_dir)]
+datasets = [
+    "control",
+    "dermatology",
+    "diabetesC",
+    "ecoli",
+    "glass",
+    "hard",
+    "hill",
+    "ILPD",
+    "Ionosphere",
+    "iris",
+    "isolet",
+    "libras",
+    "liver",
+    "LSVT",
+    "musk",
+    "Parkinsons",
+    # "Pendig",
+    "pima",
+    "s1",
+    "s2",
+    "seeds",
+    "Segment",
+    "shape",
+    "Sonar",
+    # "spam",
+    "SPECTF",
+    "thyroid",
+    "user",
+    "vowel",
+    "WDBC",
+    "wine",
+]
 n_eps = 50
 n_minPts = 50
 n_rounds = 10
@@ -125,6 +157,9 @@ if __name__ == "__main__":
     # tnp.experimental_enable_numpy_behavior()
     # xp = tnp
 
+    # import cupy as cp
+    # xp=cp
+
     time_format = "%Y%m%d%H"
     save_folder = "Data/" + datetime.now().strftime(time_format) + "_dbscan"
     if not os.path.exists(save_folder):
@@ -134,6 +169,7 @@ if __name__ == "__main__":
         for dataset_name in datasets:
             X, y = load_mat(data_dir, dataset_name, xp)
             _, xpUtils = get_array_module(X)
+            y_true = xpUtils.to_numpy(y)
             n, dims = X.shape
 
             dataset_results = []
@@ -168,7 +204,7 @@ if __name__ == "__main__":
                                 continue
 
                         for i in range(n_eps):
-                            eps = eps_values[i]
+                            eps = xpUtils.to_numpy(eps_values[i])
                             m.eps = eps
 
                             l_dens = m.l_dens
@@ -193,11 +229,13 @@ if __name__ == "__main__":
                             )
 
                             for j in range(n_minPts):
-                                minPts = threshold_values[j]
+                                minPts = xpUtils.to_numpy(threshold_values[j])
                                 m.core_threshold = minPts
                                 y_pred = m.predict(X=None)
 
-                                mi, ami, nmi, ri, ari = metric(y, y_pred)
+                                y_pred = xpUtils.to_numpy(y_pred)
+
+                                mi, ami, nmi, ri, ari = metric(y_true, y_pred)
 
                                 print(
                                     dataset_name,

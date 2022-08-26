@@ -373,7 +373,7 @@ class AxisParallelBinaryTree:
         l_upper_boundaries = xp.where(
             l_upper_boundaries >= self.global_upper_boundary,
             xpUtils.tile(self.global_upper_boundary, [l_upper_boundaries.shape[0], 1])
-            + xp.finfo(xp.float32).eps,
+            + xp.finfo(X.dtype).eps,
             l_upper_boundaries,
         )
 

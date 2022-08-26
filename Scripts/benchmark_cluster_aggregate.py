@@ -71,4 +71,4 @@ def main(argv):
 if __name__ == "__main__":
     main(sys.argv[1:])
 
-# python Scripts\benchmark_cluster_aggregate.py Data/2022081511_dbscan
+# python Scripts\benchmark_cluster_aggregate.py Data/2022082313_dbscan/include

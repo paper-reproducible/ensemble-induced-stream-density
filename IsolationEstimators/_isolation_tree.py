@@ -80,16 +80,38 @@ class IsolationTree(
         l_max = xp.max(m_in, axis=0)
 
         l_dims = xp.where(l_min + (2 * eps) <= l_max)[0]
-        split_dim = xp.random.randint(low=0, high=l_dims.shape[0])
-        split_dim = l_dims[split_dim]
+        rand_split_dim = xp.random.randint(low=0, high=l_dims.shape[0])
+        split_dim = l_dims[rand_split_dim]
 
-        split_value = xp.random.uniform(l_min[split_dim], l_max[split_dim])
-        if split_value == l_max[split_dim]:
-            split_value = split_value - eps
+        split_value = xp.random.uniform(l_min[split_dim] + eps, l_max[split_dim] - eps)
+        split_value = xp.array(split_value, dtype=l_max.dtype)
 
         i_left, i_right = self.grow(i, split_dim, split_value)
         stack_to_split.append(i_left)
         stack_to_split.append(i_right)
+
+        # for i_child in [i_left, i_right]:
+        #     lower_boundary_i = self.node_lower_boundaries[i_child, :]
+        #     upper_boundary_i = self.node_upper_boundaries[i_child, :]
+
+        #     l_in_i = self._search(self.samples_, lower_boundary_i, upper_boundary_i)
+        #     l_in_i = l_in_i[:, 0]  # only one node therefore one column
+        #     if xp.sum(l_in_i) < 1:
+        #         from ._binary_tree import single_split
+
+        #         (
+        #             lower_boundary_left,
+        #             upper_boundary_left,
+        #             lower_boundary_right,
+        #             upper_boundary_right,
+        #         ) = single_split(
+        #             self.node_lower_boundaries[i : i + 1, :],
+        #             self.node_upper_boundaries[i : i + 1, :],
+        #             split_dim,
+        #             split_value,
+        #         )
+        #         self._search(m_in, lower_boundary_i, upper_boundary_i)
+        #         raise Exception("There is no sample in this region!")
 
         return stack_to_split
 
