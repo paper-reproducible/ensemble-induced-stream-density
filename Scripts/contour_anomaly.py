@@ -66,12 +66,12 @@ _t = 100
 _n_jobs = 32
 
 estimator_configs = {
-    "isotropic_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+    "fuzzy_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
         psi,
         t=_t,
         contamination=contamination,
         mass_based=True,
-        isolation_model="isotropic",
+        isolation_model="fuzzy",
         parallel=parallel,
     ),
     "inne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
@@ -237,7 +237,7 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
             # Z = Z.reshape(xx.shape)
             # plt.contour(xx, yy, Z, levels=[0], linewidths=2, colors="black")
 
-            if estimator_name == "isotropic_mass":
+            if estimator_name == "fuzzy_mass":
                 Z = np.log(estimator.score_samples(xxyy))
             else:
                 Z = estimator.decision_function(

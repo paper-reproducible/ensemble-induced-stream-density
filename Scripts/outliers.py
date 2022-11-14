@@ -27,7 +27,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=True,
-            isolation_model="isotropic",
+            isolation_model="fuzzy",
             parallel=parallel,
         )
         result = e.fit_predict(X)

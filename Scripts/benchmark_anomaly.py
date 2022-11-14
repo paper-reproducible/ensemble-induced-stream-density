@@ -271,7 +271,7 @@ def plot_roc(
 
 
 estimator_names = [
-    "isotropic_mass",
+    "fuzzy_mass",
     "soft_anne_mass",
     "soft_anne_dis",
     "inne_mass",

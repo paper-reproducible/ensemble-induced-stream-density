@@ -93,7 +93,7 @@ estimator_configs = {
     "anne_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "soft_anne_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "inne_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
-    "isotropic_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
+    "fuzzy_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "iforest_similarity": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "anne_anomaly": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "soft_anne_anomaly": {"psi_values": [2, 4, 8, 16, 32, 64]},
@@ -102,7 +102,7 @@ estimator_configs = {
     "anne_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "soft_anne_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "inne_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
-    "isotropic_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
+    "fuzzy_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
     "iforest_mass": {"psi_values": [2, 4, 8, 16, 32, 64]},
 }
 

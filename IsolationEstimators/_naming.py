@@ -3,7 +3,7 @@ from ._voronoi import VoronoiPartitioning
 from ._voronoi_soft import SoftVoronoiPartitioning
 from ._inn import INNPartitioning
 from ._isolation_tree import IsolationTree
-from ._fuzzy import FuzziPartitioning
+from ._fuzzy import FuzzyPartitioning
 
 
 class PartitioningMethod(Enum):
@@ -19,7 +19,7 @@ class IsolationModel(Enum):
     INNE = "inne"
     SOFT_ANNE = "soft_anne"
     IFOREST = "iforest"
-    ISOTROPIC = "isotropic"
+    FUZZY = "fuzzy"
 
 
 class EstimatorType(Enum):
@@ -34,7 +34,7 @@ model_partitioning_map = {
     IsolationModel.INNE: PartitioningMethod.INN,
     IsolationModel.SOFT_ANNE: PartitioningMethod.SOFT_VORONOI,
     IsolationModel.IFOREST: PartitioningMethod.ITREE,
-    IsolationModel.ISOTROPIC: PartitioningMethod.GAUSSIAN,
+    IsolationModel.FUZZY: PartitioningMethod.GAUSSIAN,
 }
 
 
@@ -53,5 +53,5 @@ def get_partitioning_initializer(isolation_model, psi, **kwargs):
     if partitioning_method == PartitioningMethod.ITREE:
         return lambda: IsolationTree(psi, **kwargs)
     if partitioning_method == PartitioningMethod.GAUSSIAN:
-        return lambda: FuzziPartitioning(psi, random_scale=True, **kwargs)
+        return lambda: FuzzyPartitioning(psi, random_scale=True, **kwargs)
     raise NotImplementedError()
