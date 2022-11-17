@@ -66,62 +66,6 @@ _t = 100
 _n_jobs = 32
 
 estimator_configs = {
-    "fuzzy_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=True,
-        isolation_model="fuzzy",
-        parallel=parallel,
-    ),
-    "inne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=True,
-        isolation_model="inne",
-        parallel=parallel,
-    ),
-    "inne_ratio": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=False,
-        isolation_model="inne",
-        parallel=parallel,
-    ),
-    "anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=True,
-        isolation_model="anne",
-        parallel=parallel,
-    ),
-    "anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=False,
-        isolation_model="anne",
-        parallel=parallel,
-    ),
-    "soft_anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=True,
-        isolation_model="soft_anne",
-        parallel=parallel,
-    ),
-    "soft_anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
-        psi,
-        t=_t,
-        contamination=contamination,
-        mass_based=False,
-        isolation_model="soft_anne",
-        parallel=parallel,
-    ),
     "iforest_sklearn": lambda psi, contamination, parallel: IsolationForest(
         max_samples=psi,
         n_estimators=_t,
@@ -148,6 +92,75 @@ estimator_configs = {
         # rotation=False,
         # global_boundaries=(np.array([-7.0, -7.0]), np.array([7.0, 7.0])),
     ),
+    "inne_ratio": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=False,
+        isolation_model="inne",
+        parallel=parallel,
+    ),
+    "inne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=True,
+        isolation_model="inne",
+        parallel=parallel,
+    ),
+    "anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=False,
+        isolation_model="anne",
+        parallel=parallel,
+    ),
+    "anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=True,
+        isolation_model="anne",
+        parallel=parallel,
+    ),
+    "soft_anne_dis": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=False,
+        isolation_model="soft_anne",
+        parallel=parallel,
+    ),
+    "soft_anne_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=True,
+        isolation_model="soft_anne",
+        parallel=parallel,
+    ),
+    "fuzzy_mass": lambda psi, contamination, parallel: IsolationBasedAnomalyDetector(
+        psi,
+        t=_t,
+        contamination=contamination,
+        mass_based=True,
+        isolation_model="fuzzy",
+        parallel=parallel,
+    ),
+}
+
+titles = {
+    "fuzzy_mass": "Fuzzy Mass",
+    "inne_mass": "iNNE Mass",
+    "inne_ratio": "iNNE Score",
+    "anne_mass": "aNNE Mass",
+    "anne_dis": "aNNE Score",
+    "soft_anne_mass": "Soft aNNE Mass",
+    "soft_anne_dis": "Soft aNNE Score",
+    "iforest_sklearn": "iForest Score",
+    "iforest_path": "iForest Rotated Score",
+    "iforest_mass": "iForest Rotated Mass",
 }
 
 matplotlib.rcParams["contour.negative_linestyle"] = "solid"
@@ -228,7 +241,7 @@ with Parallel(n_jobs=_n_jobs, prefer="threads") as parallel:
 
             ax = plt.subplot(len(dataset_configs), len(estimator_configs), plot_num)
             if i_dataset == 0:
-                plt.title(estimator_name, size=18)
+                plt.title(titles[estimator_name], size=18)
 
             # plot the levels lines and the points
             # Z = estimator.predict(
