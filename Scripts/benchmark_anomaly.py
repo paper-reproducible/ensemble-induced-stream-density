@@ -255,7 +255,7 @@ def plot_roc(
             y_true,
             y_score,
             pos_label=pos_label,
-            name=estimator_name,
+            name=titles[estimator_name],
             linewidth=linewidth,
             ax=ax,
         )
@@ -279,9 +279,22 @@ estimator_names = [
     "anne_mass",
     "anne_dis",
     "iforest_sklearn",
-    "iforest_mass",
-    "iforest_path",
+    # "iforest_mass",
+    # "iforest_path",
 ]
+
+titles = {
+    "fuzzy_mass": "Fuzzy Mass",
+    "inne_mass": "iNNE Mass",
+    "inne_ratio": "iNNE Score",
+    "anne_mass": "aNNE Mass",
+    "anne_dis": "aNNE Score",
+    "soft_anne_mass": "Soft aNNE Mass",
+    "soft_anne_dis": "Soft aNNE Score",
+    "iforest_sklearn": "iForest Score",
+    "iforest_path": "iForest Rotated Score",
+    "iforest_mass": "iForest Rotated Mass",
+}
 
 dataset_configs = {
     "demo": {
