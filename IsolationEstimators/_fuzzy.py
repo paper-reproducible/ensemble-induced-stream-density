@@ -19,12 +19,13 @@ def _batch_gaussian(X, locs, scales):
 
 
 class FuzzyPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, member_function=_gaussian, random_scale=False, **kwargs):
+    def __init__(self, psi, member_function=_gaussian, random_scale=False, normalize=False, **kwargs):
         super().__init__(psi)
         if member_function not in _member_functions:
             raise _not_implemented
         self.member_function = member_function
         self.random_scale = random_scale
+        self.normalize = normalize
 
     def partial_fit(self, X, y=None):
         super().partial_fit(X, y)
@@ -37,6 +38,9 @@ class FuzzyPartitioning(ReservoirSamplingEstimator, TransformerMixin):
             scales = xp.sort(xpUtils.pdist(locs, locs), axis=1)[:, 1]  # [psi]
             if self.random_scale:
                 scales = scales * xp.random.rand()
-            return _batch_gaussian(X, locs, scales)
+            feature_map = _batch_gaussian(X, locs, scales)
+            if self.normalize:
+                feature_map = feature_map/xp.sum(feature_map)
+            return feature_map
         else:
             raise _not_implemented

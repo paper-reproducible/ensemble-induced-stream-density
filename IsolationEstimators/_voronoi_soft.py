@@ -2,7 +2,7 @@ from sklearn.base import TransformerMixin
 from Common import ReservoirSamplingEstimator, get_array_module
 
 
-def _ann(X, samples, p):
+def _soft_ann(X, samples, p):
     xp, xpUtils = get_array_module(X)
     m_dis = []
     for i in range(samples.shape[0]):
@@ -16,22 +16,26 @@ def _ann(X, samples, p):
 
 
 class SoftVoronoiPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, metric="minkowski", p=2, **kwargs):
+    def __init__(self, psi, metric="minkowski", p=2, normalize=False, **kwargs):
         super().__init__(psi)
         self.metric = metric
         self.p = p
+        self.normalize = normalize
 
     def partial_fit(self, X, y=None):
         super().partial_fit(X, y)
         return self
 
     def transform(self, X):
+        xp, _ = get_array_module(X)
         if self.metric == "minkowski" and self.p > 0:
-            indices, _ = _ann(X, self.samples_, self.p)
-            return indices
+            feature_map, _ = _soft_ann(X, self.samples_, self.p)
+            if self.normalize:
+                feature_map = feature_map/xp.sum(feature_map)
+            return feature_map
         else:
             raise NotImplementedError()
 
     def score_samples(self, X):
-        _, l_dis_min = _ann(X, self.samples_, self.p)
+        _, l_dis_min = _soft_ann(X, self.samples_, self.p)
         return -l_dis_min
