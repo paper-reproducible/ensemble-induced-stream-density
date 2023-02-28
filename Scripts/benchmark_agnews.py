@@ -36,7 +36,7 @@ def cluster_mass(psi, parallel=None, t=2000):
 
 def cluster_di_iforest(psi, parallel=None, t=2000):
     e = DataIndependentEstimator(
-        psi, t, partitioning_type="iforest", parallel=parallel, n_jobs=64
+        psi, t, isolation_model="iforest", parallel=parallel, n_jobs=64
     )
     dp = DensityPeak(-1, e)
     dp.accept_k = True
@@ -46,7 +46,7 @@ def cluster_di_iforest(psi, parallel=None, t=2000):
 
 def cluster_di_anne(psi, parallel=None, t=2000):
     e = DataIndependentEstimator(
-        psi, t, partitioning_type="anne", parallel=parallel, n_jobs=64
+        psi, t, isolation_model="anne", parallel=parallel, n_jobs=64
     )
     dp = DensityPeak(-1, e)
     dp.accept_k = True

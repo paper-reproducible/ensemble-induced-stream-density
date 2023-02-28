@@ -14,6 +14,8 @@ from ._outlier_mass import (
 from ._outlier_iforest import (
     IsolationForestAnomalyDetector,
 )
+from ._naming import EstimatorType, IsolationModel
+from ._estimators import init_estimator
 
 __all__ = [
     "IsolationTransformer",
@@ -24,4 +26,7 @@ __all__ = [
     "MassEstimator",
     "IsolationBasedAnomalyDetector",
     "IsolationForestAnomalyDetector",
+    "EstimatorType",
+    "IsolationModel",
+    "init_estimator",
 ]

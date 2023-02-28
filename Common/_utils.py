@@ -1,5 +1,8 @@
 import sys
 import numpy as np
+import pandas as pd
+from pandasql import sqldf
+from ._xp_utils import get_array_module
 
 
 def set_printoptions():
@@ -55,3 +58,22 @@ def call_by_argv(func, start=1):
             kwargs[k] = parse_v(v)
 
     return func(*args, **kwargs)
+
+
+def min_max_scale(X):
+    xp, _ = get_array_module(X)
+    X_ = X - xp.min(X, axis=0, keepdims=True)
+    X_ = X_ / xp.max(X_, axis=0, keepdims=True)
+    return X_
+
+
+def query_pandas(sql, **kwargs):
+    tables = {}
+    for name in kwargs:
+        value = kwargs[name]
+        if isinstance(value, str) and value.endswith(".csv"):
+            tables[name] = pd.read_csv(value)
+        else:
+            tables[name] = value  # assuming it is a data frame.
+    results = sqldf(sql, tables)
+    return results

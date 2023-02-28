@@ -82,17 +82,19 @@ def brother(l_parents, i_node):
     return l_brothers[l_brothers != i_node][0]
 
 
-NO_PARENT = -1
-NO_SPLIT = -1
 ROOT_LEVEL = 0
+NO_PARENT = -1
+NO_SPLIT_DIM = -1
+# NO_SPLIT_VALUE should never be used for comparison.
+NO_SPLIT_VALUE = np.finfo(float).min
 
 
 class AxisParallelBinaryTree:
     def seed(self, lower_boundary, upper_boundary):
         xp, _ = get_array_module(lower_boundary)
         self.node_parents = xp.array([NO_PARENT], dtype=int)
-        self.node_split_dim = xp.array([NO_SPLIT], dtype=int)
-        self.node_split_value = xp.array([NO_SPLIT], dtype=float)
+        self.node_split_dim = xp.array([NO_SPLIT_DIM], dtype=int)
+        self.node_split_value = xp.array([NO_SPLIT_VALUE], dtype=float)
         self.node_levels = xp.array([ROOT_LEVEL], dtype=int)
 
         self.node_lower_boundaries = for_list(lower_boundary)
@@ -105,7 +107,7 @@ class AxisParallelBinaryTree:
     def grow(self, i_node, split_dim, split_value):
         xp, _ = get_array_module(self.node_parents)
 
-        if self.node_split_dim[i_node] != NO_SPLIT:
+        if self.node_split_dim[i_node] != NO_SPLIT_DIM:
             raise Exception("Grow operation must be on a leaf node!")
 
         i_left = self.node_parents.shape[0]
@@ -118,7 +120,8 @@ class AxisParallelBinaryTree:
             xp.arange(n_node) == i_node, split_dim, self.node_split_dim
         )
         self.node_split_dim = xp.concatenate(
-            [self.node_split_dim, xp.array([NO_SPLIT, NO_SPLIT], dtype=int)], axis=0
+            [self.node_split_dim, xp.array([NO_SPLIT_DIM, NO_SPLIT_DIM], dtype=int)],
+            axis=0,
         )
 
         # self.node_split_value[i_node] = split_value
@@ -126,7 +129,10 @@ class AxisParallelBinaryTree:
             xp.arange(n_node) == i_node, split_value, self.node_split_value
         )
         self.node_split_value = xp.concatenate(
-            [self.node_split_value, xp.array([NO_SPLIT, NO_SPLIT], dtype=float)],
+            [
+                self.node_split_value,
+                xp.array([NO_SPLIT_VALUE, NO_SPLIT_VALUE], dtype=float),
+            ],
             axis=0,
         )
 
@@ -164,7 +170,7 @@ class AxisParallelBinaryTree:
     def prune(self, i_node):
         xp, xpUtils = get_array_module(self.node_parents)
 
-        if self.node_split_dim[i_node] != NO_SPLIT:
+        if self.node_split_dim[i_node] != NO_SPLIT_DIM:
             raise Exception("Prune operation must be on a leaf node!")
 
         l_volumes = volumes(self.node_lower_boundaries, self.node_upper_boundaries)
@@ -367,7 +373,7 @@ class AxisParallelBinaryTree:
         l_upper_boundaries = xp.where(
             l_upper_boundaries >= self.global_upper_boundary,
             xpUtils.tile(self.global_upper_boundary, [l_upper_boundaries.shape[0], 1])
-            + xp.finfo(xp.float32).eps,
+            + xp.finfo(X.dtype).eps,
             l_upper_boundaries,
         )
 
@@ -402,7 +408,17 @@ class AxisParallelBinaryTree:
 
     def leaf(self, return_boolean=True):
         if return_boolean:
-            return self.node_split_dim == NO_SPLIT
+            return self.node_split_dim == NO_SPLIT_DIM
         else:
             xp, _ = get_array_module(self.node_split_dim)
-            return xp.where(self.node_split_dim == NO_SPLIT)[0]
+            return xp.where(self.node_split_dim == NO_SPLIT_DIM)[0]
+
+    def combine_boundaries(self):
+        xp, _ = get_array_module(self.node_lower_boundaries)
+        return xp.concatenate(
+            [
+                xp.expand_dims(self.node_lower_boundaries, axis=1),
+                xp.expand_dims(self.node_upper_boundaries, axis=1),
+            ],
+            axis=1,
+        )

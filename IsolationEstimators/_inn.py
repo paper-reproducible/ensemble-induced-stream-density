@@ -103,7 +103,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=False,
-            partitioning_type="inne",
+            isolation_model="inne",
             parallel=parallel,
         )
         result = e.fit_predict(X)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=True,
-            partitioning_type="inne",
+            isolation_model="inne",
             parallel=parallel,
         )
         result = e.fit_predict(X)

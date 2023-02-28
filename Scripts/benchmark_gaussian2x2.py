@@ -36,7 +36,7 @@ def cluster_mass(psi, parallel=None, t=200):
 
 def cluster_di_iforest(psi, parallel=None, t=200):
     e = DataIndependentEstimator(
-        psi, t, partitioning_type="iforest", parallel=parallel, n_jobs=64
+        psi, t, isolation_model="iforest", parallel=parallel, n_jobs=64
     )
     dp = DensityPeak(-1, e)
     dp.accept_k = True
@@ -46,7 +46,7 @@ def cluster_di_iforest(psi, parallel=None, t=200):
 
 def cluster_di_anne(psi, parallel=None, t=200):
     e = DataIndependentEstimator(
-        psi, t, partitioning_type="anne", parallel=parallel, n_jobs=64
+        psi, t, isolation_model="anne", parallel=parallel, n_jobs=64
     )
     dp = DensityPeak(-1, e)
     dp.accept_k = True
@@ -184,11 +184,11 @@ def benchmark_total(X, estimators, stream: ProbabilityStream):
 
 
 def benchmark_gaussian2x2():
-    with Parallel(n_jobs=32, backend="loky") as parallel:
+    # with Parallel(n_jobs=32, backend="loky") as parallel:
     # with Parallel(n_jobs=32, backend="multiprocessing") as parallel:
     # with Parallel(n_jobs=32, backend="threading") as parallel:
     # with Parallel(n_jobs=1, prefer="threads") as parallel:
-    # with Parallel(n_jobs=32, prefer="threads") as parallel:
+    with Parallel(n_jobs=32, prefer="threads") as parallel:
     # with Parallel(n_jobs=32, prefer="processes") as parallel:
 
         stream = None

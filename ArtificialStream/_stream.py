@@ -3,7 +3,7 @@ import numpy as np
 
 from numbers import Number
 from types import LambdaType, FunctionType
-from Common import ball_samples
+from Common import ball_samples, get_array_module
 
 
 class ProbabilityStream:
@@ -80,9 +80,10 @@ class ProbabilityStream:
         else:
             X = xp.random.rand(self.base_count, self.n_features)
 
+        _, xpUtils = get_array_module(X)
         probs = xp.array(self._calc_unnormalised_densities(X, t))
         p = xp.sum(probs, axis=0)
-        p = p / xp.sum(p)
+        p = xpUtils.to_numpy(p / xp.sum(p))
 
         c = np.random.choice(self.base_count, n, p=p).tolist()
         X = xp.take(X, c, axis=0)

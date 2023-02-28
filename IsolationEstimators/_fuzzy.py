@@ -4,7 +4,8 @@ from Common import ReservoirSamplingEstimator, get_array_module
 
 
 _gaussian = "gaussian"
-_kernels = [_gaussian]
+_member_functions = [_gaussian]
+_not_implemented = NotImplementedError("This member function is not supported.")
 
 
 def _batch_gaussian(X, locs, scales):
@@ -13,17 +14,18 @@ def _batch_gaussian(X, locs, scales):
     scales = xp.expand_dims(scales, axis=0)
     p = xpUtils.pdist(X, locs, root=False)  # [n, psi]
     p = xp.exp(p / (0 - 2 * (scales**2)))
-    p = p / scales / xp.sqrt((np.pi * 2) ** dims)
+    p = p / scales  # / xp.sqrt((np.pi * 2) ** dims)
     return p
 
 
-class FuzziPartitioning(ReservoirSamplingEstimator, TransformerMixin):
-    def __init__(self, psi, kernel=_gaussian, random_scale=False, **kwargs):
+class FuzzyPartitioning(ReservoirSamplingEstimator, TransformerMixin):
+    def __init__(self, psi, member_function=_gaussian, random_scale=False, normalize=False, **kwargs):
         super().__init__(psi)
-        if kernel not in _kernels:
-            raise NotImplementedError("This kernel is not supported.")
-        self.kernel = kernel
+        if member_function not in _member_functions:
+            raise _not_implemented
+        self.member_function = member_function
         self.random_scale = random_scale
+        self.normalize = normalize
 
     def partial_fit(self, X, y=None):
         super().partial_fit(X, y)
@@ -31,11 +33,14 @@ class FuzziPartitioning(ReservoirSamplingEstimator, TransformerMixin):
 
     def transform(self, X):
         xp, xpUtils = get_array_module(X)
-        if self.kernel == _gaussian:
+        if self.member_function == _gaussian:
             locs = self.samples_  # [psi, dims]
             scales = xp.sort(xpUtils.pdist(locs, locs), axis=1)[:, 1]  # [psi]
             if self.random_scale:
                 scales = scales * xp.random.rand()
-            return _batch_gaussian(X, locs, scales)
+            feature_map = _batch_gaussian(X, locs, scales)
+            if self.normalize:
+                feature_map = feature_map/xp.sum(feature_map)
+            return feature_map
         else:
-            raise NotImplementedError("This kernel is not supported.")
+            raise _not_implemented

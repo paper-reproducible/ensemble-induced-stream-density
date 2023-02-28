@@ -3,13 +3,14 @@ from Common import get_array_module
 from sklearn.base import BaseEstimator
 
 
-def get_samples(X, psi):
+def get_samples(X, psi, replace=False):
     xp, xpUtils = get_array_module(X)
-    X = xpUtils.unique(X)
-    n = X.shape[0]
+    if not replace:
+        X = xpUtils.unique(X)
 
+    n = X.shape[0]
     if psi < n:
-        new_indices = np.random.choice(n, size=(psi), replace=False).tolist()
+        new_indices = np.random.choice(n, size=(psi), replace=replace).tolist()
         return xp.take(X, new_indices, axis=0)
     else:
         return xp.copy(X)
@@ -55,12 +56,13 @@ def update_samples(X, samples, start=0):
 
 
 class ReservoirSamplingEstimator(BaseEstimator):
-    def __init__(self, psi):
+    def __init__(self, psi, replace=False, **kwargs):
         self.psi = psi
         self.fitted = 0
+        self.replace = replace
 
     def fit(self, X, y=None):
-        self.samples_ = get_samples(X, self.psi)
+        self.samples_ = get_samples(X, self.psi, self.replace)
         self.fitted = X.shape[0]
         self.changed_ = True
         return self

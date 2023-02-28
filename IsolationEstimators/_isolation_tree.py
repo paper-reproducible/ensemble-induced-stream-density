@@ -1,11 +1,8 @@
-import numpy
 from sklearn.base import TransformerMixin, DensityMixin
 from Common import (
     ReservoirSamplingEstimator,
     get_array_module,
     rotate,
-    is_check_and_warn_enabled,
-    check_and_warn,
     checked_and_warn,
 )
 from ._binary_tree import AxisParallelBinaryTree
@@ -13,83 +10,133 @@ from ._binary_tree import AxisParallelBinaryTree
 
 def get_boundaries(X, ball_scaled=True):
     xp, _ = get_array_module(X)
+    eps = xp.finfo(X.dtype).eps
+    X_min = X.min(axis=0)
+    X_max = X.max(axis=0)
+    select_dims = xp.where(X_min < X_max)[0]
 
     if ball_scaled:
-        global_upper_boundary = xp.ones([1, X.shape[1]], dtype=X.dtype)
+        global_upper_boundary = xp.ones([1, select_dims.shape[0]], dtype=X.dtype)
         global_lower_boundary = 0 - global_upper_boundary
     else:
-        global_lower_boundary = X.min(axis=0, keepdims=True)
-        global_upper_boundary = X.max(axis=0, keepdims=True)
+        global_lower_boundary = xp.expand_dims(X_min[select_dims], axis=0)
+        global_upper_boundary = xp.expand_dims(X_max[select_dims] + (eps * 2), axis=0)
+        # Only adding 1 eps does not change the comparison result.
 
-    return global_lower_boundary, global_upper_boundary
+    return global_lower_boundary, global_upper_boundary, select_dims
 
 
 class IsolationTree(
     ReservoirSamplingEstimator, AxisParallelBinaryTree, TransformerMixin
 ):
-    def __init__(self, psi, **kwargs):
+    def __init__(self, psi, rotation=False, global_boundaries=None, **kwargs):
         super().__init__(psi)
+        self.rotation = rotation
+        self.global_boundaries = global_boundaries
+        return
 
-    def fit(self, X, y=None, ball_scaled=True):
-        super().fit(X, y)
-        global_lower_boundary, global_upper_boundary = get_boundaries(X, ball_scaled)
+    def fit(self, X, y=None):
+        xp, _ = get_array_module(X)
+        if self.rotation:
+            X_, SO = rotate(X)
+            self.SO_ = SO
+        else:
+            X_ = X
+        if self.global_boundaries is not None:
+            global_lower_boundary, global_upper_boundary = self.global_boundaries
+            select_dims = xp.arange(X.shape[1])
+        else:
+            global_lower_boundary, global_upper_boundary, select_dims = get_boundaries(
+                X_, self.rotation
+            )
+        self.select_dims = select_dims
+        super().fit(X_[:, select_dims], y)
         super().seed(global_lower_boundary, global_upper_boundary)
         self._build_tree()
         return self
 
-    def _isolation_split(self, lower_boundary, upper_boundary):
-        xp, xpUtils = get_array_module(lower_boundary)
+    def search(self, X, l_nodes=None):
+        if self.rotation:
+            X_, SO = rotate(X)
+            self.SO_ = SO
+        else:
+            X_ = X
+        X_ = X_[:, self.select_dims]
+        return super().search(X_, l_nodes)
+
+    def _isolation_split(self, i, stack_to_split, lower_boundary, upper_boundary):
+        xp, _ = get_array_module(lower_boundary)
+        eps = xp.finfo(self.samples_.dtype).eps
 
         l_in = self._search(self.samples_, lower_boundary, upper_boundary)
         l_in = l_in[:, 0]  # only one node therefore one column
         if xp.sum(l_in) == 1:
-            return True, None, None, l_in
+            return stack_to_split
         elif xp.sum(l_in) < 1:
             raise Exception("There is no sample in this region!")
 
         m_in = xp.take(self.samples_, xp.where(l_in)[0], axis=0)
+        l_min = xp.min(m_in, axis=0)
+        l_max = xp.max(m_in, axis=0)
 
-        l_dims = xp.where(xp.not_equal(xp.min(m_in, axis=0), xp.max(m_in, axis=0)))[0]
-        split_dim = xp.random.randint(l_dims.shape[0])
-        split_dim = l_dims[split_dim]
+        l_dims = xp.where(l_min + (2 * eps) <= l_max)[0]
+        rand_split_dim = xp.random.randint(low=0, high=l_dims.shape[0])
+        split_dim = l_dims[rand_split_dim]
 
-        sample_values = xpUtils.unique(m_in[:, split_dim])
-        sample_values = xp.sort(sample_values)
-        split_pos = xp.random.randint(sample_values.shape[0] - 1)
-        split_value = (sample_values[split_pos] + sample_values[split_pos + 1]) / 2
+        split_value = xp.random.uniform(l_min[split_dim] + eps, l_max[split_dim] - eps)
+        split_value = xp.array(split_value, dtype=l_max.dtype)
 
-        if is_check_and_warn_enabled():
-            check_and_warn(
-                numpy.any(lower_boundary == split_value)
-                or numpy.any(upper_boundary == split_value),
-                "[DEBUG] _isolation_split is resulting a compressed region",
-            )
+        i_left, i_right = self.grow(i, split_dim, split_value)
+        stack_to_split.append(i_left)
+        stack_to_split.append(i_right)
 
-        return False, split_dim, split_value, l_in
+        # for i_child in [i_left, i_right]:
+        #     lower_boundary_i = self.node_lower_boundaries[i_child, :]
+        #     upper_boundary_i = self.node_upper_boundaries[i_child, :]
+
+        #     l_in_i = self._search(self.samples_, lower_boundary_i, upper_boundary_i)
+        #     l_in_i = l_in_i[:, 0]  # only one node therefore one column
+        #     if xp.sum(l_in_i) < 1:
+        #         from ._binary_tree import single_split
+
+        #         (
+        #             lower_boundary_left,
+        #             upper_boundary_left,
+        #             lower_boundary_right,
+        #             upper_boundary_right,
+        #         ) = single_split(
+        #             self.node_lower_boundaries[i : i + 1, :],
+        #             self.node_upper_boundaries[i : i + 1, :],
+        #             split_dim,
+        #             split_value,
+        #         )
+        #         self._search(m_in, lower_boundary_i, upper_boundary_i)
+        #         raise Exception("There is no sample in this region!")
+
+        return stack_to_split
 
     def _build_tree(self):
         stack_to_split = [0]
 
         while len(stack_to_split) > 0:
             i = stack_to_split.pop()
-            lower_boundary_i = self.node_lower_boundaries[i]
-            upper_boundary_i = self.node_upper_boundaries[i]
-
-            is_leaf, split_dim, split_value, _ = self._isolation_split(
-                lower_boundary_i, upper_boundary_i
+            lower_boundary_i = self.node_lower_boundaries[i, :]
+            upper_boundary_i = self.node_upper_boundaries[i, :]
+            stack_to_split = self._isolation_split(
+                i, stack_to_split, lower_boundary_i, upper_boundary_i
             )
-            if not is_leaf:
-                count_nodes = self.node_parents.shape[0]
-                self.grow(i, split_dim, split_value)
-                stack_to_split.append(count_nodes)
-                stack_to_split.append(count_nodes + 1)
 
         self.node_is_leaf_ = self.leaf()
         self.node_volumes_ = self.volumes()
 
     def partial_fit(self, X, y=None):
         xp, _ = get_array_module(X)
-        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X)
+        if self.rotation:
+            X_, _ = rotate(X, self.SO_)
+        else:
+            X_ = X
+        X_ = X_[:, self.select_dims]
+        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X_)
 
         for i in range(changed_count):
             drop_sample = drop_samples[i : i + 1, :]
@@ -104,10 +151,10 @@ class IsolationTree(
             # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
             # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
 
-        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
+        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X_), axis=0, dtype=float)
 
         self.samples_ = reservoir
-        self.fitted = self.fitted + X.shape[0]
+        self.fitted = self.fitted + X_.shape[0]
 
         # TODO
         # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
@@ -159,50 +206,17 @@ class IsolationTree(
         return indices
 
 
-class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
-    def __init__(self, psi, rotation=False):
-        super().__init__(psi)
+class AdaptiveMassEstimationTree(IsolationTree, DensityMixin):
+    def __init__(self, psi, **kwargs):
+        super().__init__(psi, **kwargs)
         self.fitted = 0
-        self.rotation = rotation
 
     def fit(self, X, y=None):
         xp, _ = get_array_module(X)
-        if self.rotation:
-            X, SO = rotate(X)
-            self.SO_ = SO
         super().fit(X, y)
         self.node_mass_ = xp.sum(self.search(X), axis=0, dtype=float)
         self.fitted = X.shape[0]
         # self.node_volumes_ = self.volumes() # included in fit
-
-    def partial_fit(self, X, y=None):
-        xp, _ = get_array_module(X)
-        if self.rotation:
-            X, _ = rotate(X, self.SO_)
-        changed_count, new_samples, drop_samples, reservoir = super().update_samples(X)
-
-        for i in range(changed_count):
-            drop_sample = drop_samples[i : i + 1, :]
-            self._prune(drop_sample)
-            # TODO
-            # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
-            # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-
-            new_sample = new_samples[i : i + 1, :]
-            self._grow(new_sample)
-            # TODO
-            # print(xp.sum(self.node_volumes_[self.node_is_leaf_]))
-            # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-
-        self.node_mass_ = self.node_mass_ + xp.sum(self.search(X), axis=0, dtype=float)
-
-        self.samples_ = reservoir
-        self.fitted = self.fitted + X.shape[0]
-
-        # TODO
-        # print(xp.sum(self.node_mass_[self.node_is_leaf_]))
-        # print(self.fitted)
-        return self
 
     def _grow(self, new_sample):
         xp, _ = get_array_module(new_sample)
@@ -225,16 +239,17 @@ class IncrementalMassEstimationTree(IsolationTree, DensityMixin):
         self.node_mass_ = self.node_mass_ + l_volumes_diff * rho_drop
         return self
 
-    def score(self, X, y=None, return_demass=True):
+    def score(self, X, y=None, return_demass=False):
         xp, _ = get_array_module(X)
-        if self.rotation:
-            X, _ = rotate(X, self.SO_)
-        l_in = self.search(X, self.node_is_leaf_)
-        indices = xp.where(l_in)[1]  # 1 is the axis to "reduce"
+        indices = super().transform(X)[:, 0]
         l_leaf_mass = self.node_mass_[self.node_is_leaf_]
         if return_demass:
             l_leaf_volumes = self.node_volumes_[self.node_is_leaf_]
-            l_leaf_demass = l_leaf_mass / l_leaf_volumes
+            if xp.any(l_leaf_volumes == 0):
+                eps = xp.finfo(X.dtype).eps
+                l_leaf_demass = (l_leaf_mass + eps) / (l_leaf_volumes + eps)
+            else:
+                l_leaf_demass = l_leaf_mass / l_leaf_volumes
             return xp.take(l_leaf_demass, indices)
         else:
             return xp.take(l_leaf_mass, indices)

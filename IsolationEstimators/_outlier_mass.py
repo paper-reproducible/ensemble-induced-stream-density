@@ -2,7 +2,7 @@ from joblib import delayed
 from Common import get_array_module
 from ._outlier_base import BaseAnomalyDetector
 from ._data_dependent import MassEstimator
-from ._constants import INNE
+from ._naming import IsolationModel
 
 
 class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
@@ -12,7 +12,7 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
         t,
         contamination="auto",
         mass_based=True,
-        partitioning_type=INNE,
+        isolation_model=IsolationModel.INNE.value,
         n_jobs=16,
         verbose=0,
         parallel=None,
@@ -22,17 +22,15 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
         self.mass_estimator = MassEstimator(
             psi,
             t,
-            partitioning_type,
+            isolation_model,
             n_jobs,
             verbose,
             parallel,
             anomaly_detection=True,
             **kwargs
         )
-        if hasattr(self.mass_estimator.base_transformer, "score_samples"):
-            self.mass_based = mass_based
-        else:
-            self.mass_based = True
+        self.isolation_model = isolation_model
+        self.mass_based = mass_based
 
     def fit(self, X, y=None):
         self.mass_estimator.fit(X, y)
@@ -40,7 +38,12 @@ class IsolationBasedAnomalyDetector(BaseAnomalyDetector):
 
     def score_samples(self, X):
         if self.mass_based:
-            return self.mass_estimator.score(X)
+            mass = self.mass_estimator.score(X)
+            # if self.isolation_model == FUZZI:
+            #     xp, _ = get_array_module(mass)
+            #     eps = xp.finfo(mass.dtype).eps
+            #     return xp.log(mass + eps)
+            return mass
         else:
             xp, _ = get_array_module(X)
 

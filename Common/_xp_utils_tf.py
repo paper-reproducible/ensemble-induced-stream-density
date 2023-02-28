@@ -60,4 +60,5 @@ def setup_tf(xpUtils):
     setattr(xpUtils, "tensor_scatter_nd_update", _tensor_scatter_nd_update)
     setattr(xpUtils, "gather_nd", tf.gather_nd)
     setattr(xpUtils, "percentile", tfp.stats.percentile)
+    setattr(xpUtils, "softmax", tf.nn.softmax)
     return xp

@@ -27,7 +27,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=True,
-            partitioning_type="fuzzi",
+            isolation_model="fuzzy",
             parallel=parallel,
         )
         result = e.fit_predict(X)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=False,
-            partitioning_type="inne",
+            isolation_model="inne",
             parallel=parallel,
         )
         result = e.fit_predict(X)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=True,
-            partitioning_type="inne",
+            isolation_model="inne",
             parallel=parallel,
         )
         result = e.fit_predict(X)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             1000,
             contamination=0.2,
             mass_based=True,
-            partitioning_type="anne",
+            isolation_model="anne",
             parallel=parallel,
         )
         result = e.fit_predict(X)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         #     1000,
         #     contamination=0.2,
         #     mass_based=True,
-        #     partitioning_type="iforest",
+        #     isolation_model="iforest",
         #     parallel=parallel,
         # )
         # result = e.fit_predict(X_)
